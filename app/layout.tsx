@@ -18,9 +18,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" style={{ colorScheme: 'dark' }}>
       <body
-        className={`${sourceSerif.variable} antialiased font-serif`}
+        className={`${sourceSerif.variable} antialiased font-serif bg-background text-foreground`}
       >
         {children}
       </body>
