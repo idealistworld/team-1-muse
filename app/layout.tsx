@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+import NavBar from "./dashboard/components/NavBar";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -23,9 +25,17 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistMono.variable} antialiased`}
-        style={{ backgroundColor: '#F7F6F7' }}
+        style={{ backgroundColor: "#F7F6F7" }}
       >
-        {children}
+        {/* Top nav */}
+        <NavBar />
+
+        {/* Page content */}
+        <main className="p-8">
+          {children}
+        </main>
+
+        {/* Toasts */}
         <ToastContainer />
       </body>
     </html>

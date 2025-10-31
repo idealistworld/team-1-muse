@@ -4,7 +4,8 @@ import { useState } from "react";
 import { ContentFeed } from "@/app/dashboard/components/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
 import { CreatorProfiles } from "../components/CreatorProfiles";
-import { SuggestedEditsCard } from "@/app/dashboard/components/SuggestedEditsCard";
+import { ProfileCard } from "@/app/dashboard/components/ProfileCard";
+import { SuggestedEditsCard } from "../components/SuggestedEditsCard";
 import { PostViewModal } from "../components/PostViewModal";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -50,22 +51,6 @@ export default function CreatePostPage() {
         postUrl={expandedPost?.postUrl}
       />
       <div className="min-h-screen bg-[#F7F6F7] p-4">
-        {/* Auth Section */}
-        <div className="flex justify-between items-center mb-6 max-w-[1800px] mx-auto">
-          <h1 className="text-2xl font-bold">Muse</h1>
-          {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {user.email}
-              </span>
-              <Button variant="outline" onClick={handleLogout}>
-                Logout
-              </Button>
-            </div>
-          ) : (
-            <Button onClick={() => router.push("/login")}>Login</Button>
-          )}
-        </div>
 
         {/* Three Column Layout */}
         <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto">
@@ -87,6 +72,35 @@ export default function CreatePostPage() {
               profiles={creatorProfiles}
               profileCount={creatorProfiles.length}
             />
+  
+          <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">
+              <div className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
+                Suggested Profiles • {creatorProfiles.length} following
+              </div>
+
+              {/* If creatorProfiles has data we can map it.
+                 Adjust property names if yours are different. */}
+              {creatorProfiles.length > 0 ? (
+                creatorProfiles.map((p: any) => (
+                  <ProfileCard
+                    key={p.id ?? p.name}
+                    name={p.name}
+                    connections={p.followers || p.connections || "10K connections"}
+                  />
+                ))
+              ) : (
+                <>
+                  <ProfileCard
+                    name="Creator 1"
+                    connections="10K connections"
+                  />
+                  <ProfileCard
+                    name="Creator 2"
+                    connections="8.2K connections"
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           {/* Middle Column - Inspired By / Main Content */}
