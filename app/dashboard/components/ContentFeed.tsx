@@ -2,13 +2,6 @@
 
 import { PostCard } from "./PostCard";
 import type { ContentPost, Profile } from "@/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
 interface ContentFeedProps {
@@ -56,31 +49,32 @@ export function ContentFeed({
       )}
       {showCreatorFilter && (
         <div className="w-full space-y-1">
-          <label className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
+          <label
+            htmlFor="content-feed-creator-filter"
+            className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide"
+          >
             Filter by Creator
           </label>
-          <Select
+          <select
+            id="content-feed-creator-filter"
             value={selectedCreatorId === null ? "all" : selectedCreatorId.toString()}
-            onValueChange={(value) => {
+            onChange={(event) => {
+              const value = event.target.value;
               if (value === "all") {
                 onCreatorFilterChange?.(null);
               } else {
                 onCreatorFilterChange?.(Number(value));
               }
             }}
+            className="w-full rounded-md border border-[#E1E1E1] bg-white px-3 py-2 text-sm text-[#696969] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#5578C8]/40"
           >
-            <SelectTrigger className="bg-white text-[#696969]">
-              <SelectValue placeholder="All creators" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All creators</SelectItem>
-              {creatorProfiles?.map((profile) => (
-                <SelectItem key={profile.id} value={profile.id.toString()}>
-                  {profile.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="all">All creators</option>
+            {creatorProfiles?.map((profile) => (
+              <option key={profile.id} value={profile.id.toString()}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
         </div>
       )}
       <div className="flex w-full flex-col space-y-2">
