@@ -4,6 +4,7 @@ export interface ContentPost {
   author: string;
   timeAgo: string;
   isHighlighted: boolean;
+  creatorId: number;
   postUrl?: string;
   postRaw?: string;
 }
