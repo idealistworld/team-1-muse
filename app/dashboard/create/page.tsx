@@ -13,11 +13,15 @@ import type { ContentPost } from "@/types";
 
 export default function CreatePostPage() {
   const {
-    contentFeed,
+    filteredContentFeed,
     creatorProfiles,
     user,
     togglePostHighlight,
     getHighlightedPosts,
+    selectedCreatorId,
+    setSelectedCreatorId,
+    searchQuery,
+    setSearchQuery,
   } = useCreatePostViewModel();
   const router = useRouter();
   const supabase = createClient();
@@ -68,10 +72,15 @@ export default function CreatePostPage() {
           {/* Left Column - Sidebar */}
           <div className="space-y-4">
             <ContentFeed
-              posts={contentFeed}
-              postCount={contentFeed.length}
+              posts={filteredContentFeed}
+              postCount={filteredContentFeed.length}
               onTogglePost={togglePostHighlight}
               onExpandPost={handleExpandPost}
+              creatorProfiles={creatorProfiles}
+              selectedCreatorId={selectedCreatorId}
+              onCreatorFilterChange={(value) => setSelectedCreatorId(value)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
             />
 
             <CreatorProfiles

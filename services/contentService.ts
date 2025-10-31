@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/client";
 import type { ContentPost, CreatorContent, CreatorProfile, Profile } from "@/types";
 
+interface CreatorContentWithProfile extends CreatorContent {
+  creator_profiles: {
+    creator_id: number;
+    profile_url: string;
+    platform: string;
+  };
+}
+
 export class ContentService {
   private supabase = createClient();
 
@@ -20,7 +28,7 @@ export class ContentService {
     if (!data) return [];
 
     // Transform database data to ContentPost format
-    return data.map((item: any, index: number) => {
+    return data.map((item: CreatorContentWithProfile, index: number) => {
       // Extract title from post_raw (first line or first 60 chars)
       let title = "Some Cool Post Title";
       if (item.post_raw) {
@@ -46,6 +54,7 @@ export class ContentService {
         author: authorName,
         timeAgo,
         isHighlighted: index === 0, // Highlight first post by default
+        creatorId: item.creator_id,
         postUrl: item.post_url,
         postRaw: item.post_raw,
       };
@@ -61,12 +70,13 @@ export class ContentService {
 
     if (!data) return [];
 
-    return data.map((item: CreatorContent, index: number) => ({
+    return data.map((item: CreatorContent) => ({
       id: item.content_id,
       title: "Some Cool Post Title",
       author: "First Last",
       timeAgo: "1 day ago",
       isHighlighted: false,
+      creatorId: item.creator_id,
       postUrl: item.post_url,
     }));
   }

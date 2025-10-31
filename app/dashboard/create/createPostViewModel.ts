@@ -9,6 +9,8 @@ export function useCreatePostViewModel() {
   const [contentFeed, setContentFeed] = useState<ContentPost[]>([]);
   const [creatorProfiles, setCreatorProfiles] = useState<Profile[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [selectedCreatorId, setSelectedCreatorId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
 
   // Fetch user session
@@ -82,6 +84,35 @@ export function useCreatePostViewModel() {
     return contentFeed.filter((post) => post.isHighlighted);
   }
 
+  // Filter posts by selected creator
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredContentFeed = contentFeed.filter((post) => {
+    const matchesCreator =
+      selectedCreatorId === null || post.creatorId === selectedCreatorId;
+
+    if (!matchesCreator) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    const haystacks = [post.title, post.author, post.postRaw ?? ""];
+    return haystacks.some((value) =>
+      value.toLowerCase().includes(normalizedQuery)
+    );
+  });
+
+  function clearCreatorFilter() {
+    setSelectedCreatorId(null);
+  }
+
+  function clearSearchQuery() {
+    setSearchQuery("");
+  }
+
   // Clear all highlights
   function clearAllHighlights() {
     const highlightCount = contentFeed.filter((post) => post.isHighlighted).length;
@@ -97,10 +128,17 @@ export function useCreatePostViewModel() {
 
   return {
     contentFeed,
+    filteredContentFeed,
     creatorProfiles,
     user,
     togglePostHighlight,
     getHighlightedPosts,
     clearAllHighlights,
+    selectedCreatorId,
+    setSelectedCreatorId,
+    clearCreatorFilter,
+    searchQuery,
+    setSearchQuery,
+    clearSearchQuery,
   };
 }
