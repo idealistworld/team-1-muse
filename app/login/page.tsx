@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,8 +26,10 @@ export default function Login() {
     });
 
     if (error) {
+      toast.error(`Sign in failed: ${error.message}`);
       setError(error.message);
     } else {
+      toast.success("Successfully signed in!");
       router.push("/");
     }
 
@@ -43,8 +46,10 @@ export default function Login() {
     });
 
     if (error) {
+      toast.error(`Sign up failed: ${error.message}`);
       setError(error.message);
     } else {
+      toast.success("Account created! Please check your email to verify.");
       router.push("/");
     }
 
