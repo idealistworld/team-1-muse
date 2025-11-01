@@ -1,15 +1,25 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 export default function NavBar() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="px-6 py-3 flex items-center justify-between">
         {/* Left: brand */}
-        <h1 className="text-2xl font-bold text-gray-900">
-          Muse
-        </h1>
+        <div className="flex items-center gap-2">
+          <Image
+            src="/logo.png"  
+            alt="Muse logo"
+            width={25}
+            height={25}
+            className="shrink-0"
+          />
+          <h1 className="text-2xl font-bold text-gray-900">
+            Muse
+          </h1>
+        </div>
 
         {/* Right: actions */}
         <div className="flex items-center space-x-3">
