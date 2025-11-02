@@ -7,16 +7,12 @@ import { CreatorProfiles } from "../components/CreatorProfiles";
 import { ProfileCard } from "@/app/dashboard/components/ProfileCard";
 import { SuggestedEditsCard } from "../components/SuggestedEditsCard";
 import { PostViewModal } from "../components/PostViewModal";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import type { ContentPost } from "@/types";
+import type { ContentPost, Profile } from "@/types";
 
 export default function CreatePostPage() {
   const {
     filteredContentFeed,
     creatorProfiles,
-    user,
     togglePostHighlight,
     getHighlightedPosts,
     selectedCreatorId,
@@ -24,16 +20,8 @@ export default function CreatePostPage() {
     searchQuery,
     setSearchQuery,
   } = useCreatePostViewModel();
-  const router = useRouter();
-  const supabase = createClient();
-
   const highlightedPosts = getHighlightedPosts();
   const [expandedPost, setExpandedPost] = useState<ContentPost | null>(null);
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   function handleExpandPost(post: ContentPost) {
     setExpandedPost(post);
@@ -51,7 +39,6 @@ export default function CreatePostPage() {
         postUrl={expandedPost?.postUrl}
       />
       <div className="min-h-screen bg-[#F7F6F7] p-4">
-
         {/* Three Column Layout */}
         <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto">
           {/* Left Column - Sidebar */}
@@ -72,8 +59,8 @@ export default function CreatePostPage() {
               profiles={creatorProfiles}
               profileCount={creatorProfiles.length}
             />
-  
-          <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">
+
+            <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">
               <div className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
                 Suggested Profiles • {creatorProfiles.length} following
               </div>
@@ -81,19 +68,18 @@ export default function CreatePostPage() {
               {/* If creatorProfiles has data we can map it.
                  Adjust property names if yours are different. */}
               {creatorProfiles.length > 0 ? (
-                creatorProfiles.map((p: any) => (
+                creatorProfiles.map((p: Profile & { followers?: string }) => (
                   <ProfileCard
                     key={p.id ?? p.name}
                     name={p.name}
-                    connections={p.followers || p.connections || "10K connections"}
+                    connections={
+                      p.followers || p.connections || "10K connections"
+                    }
                   />
                 ))
               ) : (
                 <>
-                  <ProfileCard
-                    name="Creator 1"
-                    connections="10K connections"
-                  />
+                  <ProfileCard name="Creator 1" connections="10K connections" />
                   <ProfileCard
                     name="Creator 2"
                     connections="8.2K connections"
