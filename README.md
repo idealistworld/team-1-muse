@@ -14,21 +14,25 @@ Our app (Muse) takes in data from sources of successful creators on LinkedIn (an
 ## Setup
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Copy `.env.example` to `.env.local` and fill in your credentials:
+
    ```bash
    cp .env.example .env.local
    ```
 
    Required environment variables:
+
    - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
    - `OPEN_AI_API_KEY` - Your OpenAI API key
 
 3. Run the development server:
+
    ```bash
    npm run dev
    ```
@@ -37,4 +41,4 @@ Our app (Muse) takes in data from sources of successful creators on LinkedIn (an
 
 ## Mock Data
 
-As of now we use real data for both our creator and content. It's not 100% complete and some of the endpoints need to be updated, but the data displayed is real.
+As of now we use real data for both our creators and content. It's not 100% complete and some of the endpoints need to be updated, but the data displayed is real.
