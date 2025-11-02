@@ -28,11 +28,12 @@ export default function NavBar() {
         {/* Right: actions */}
         <div className="flex items-center space-x-3">
           {/* Contact */}
-          <button
+          <a
+            href="mailto:ckn9573@nyu.edu?subject=Muse%20-%20Support%20Ticket"
             className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             Contact
-          </button>
+          </a>
 
           {/* Sign out */}
           <button
