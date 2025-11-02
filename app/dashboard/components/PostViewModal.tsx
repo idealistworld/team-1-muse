@@ -1,3 +1,7 @@
+/**
+ * PostViewModal - Modal dialog for viewing full post content
+ * Displays post title, author, timestamp, full content, and link to original post
+ */
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

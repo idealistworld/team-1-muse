@@ -1,3 +1,7 @@
+/**
+ * ContentFeed - Displays a filterable feed of content posts
+ * Features: search by title/author/content, filter by creator, highlight posts for inspiration
+ */
 "use client";
 
 import { PostCard } from "./PostCard";

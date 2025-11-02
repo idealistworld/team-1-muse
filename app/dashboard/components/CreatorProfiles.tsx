@@ -1,3 +1,7 @@
+/**
+ * CreatorProfiles - Displays a list of creator profiles the user is following
+ * Shows profile cards with names and connection counts
+ */
 import { ProfileCard } from "./ProfileCard";
 import type { Profile } from "@/types";
 

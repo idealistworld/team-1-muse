@@ -1,3 +1,7 @@
+/**
+ * ProfileCard - Renders an individual profile card with avatar and connection count
+ * Used to display creator profiles in various sections of the dashboard
+ */
 interface ProfileCardProps {
   name: string;
   connections: string;
