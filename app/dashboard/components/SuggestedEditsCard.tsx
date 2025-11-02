@@ -1,3 +1,7 @@
+/**
+ * SuggestedEditsCard - AI-powered component that generates content variations
+ * Features: generates multiple versions of input content, tracks version history, text-to-speech playback
+ */
 "use client"
 
 import * as React from "react"
