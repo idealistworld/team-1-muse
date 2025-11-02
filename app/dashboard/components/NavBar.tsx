@@ -10,11 +10,15 @@ export default function NavBar() {
         {/* Left: brand */}
         <div className="flex items-center gap-2">
           <Image
-            src="/logo.png"  
+            src="/logo.png"
             alt="Muse logo"
             width={25}
             height={25}
             className="shrink-0"
+            style={{
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.2) brightness(1.1)'
+            }}
           />
           <h1 className="text-2xl font-bold text-gray-900">
             Muse
