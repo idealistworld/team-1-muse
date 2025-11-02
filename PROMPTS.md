@@ -17,15 +17,27 @@
 
 **Prompt:** I want to create a way to filter the content feed by creator. Can you use shad to see if this is possible? Can you use the view model?
 **Result:**
-
 - What worked immediately: It was able to create a working filter.
 - What needed fixing: It tried using Radix, but that caused problems with deployment, so now it uses a native control. In addition, I made edits to change how it appeared on the page.
 - What we learned: AI needs more context regarding aesthetic choices. It still needs human creativity.
-  **Prompt:** I also want you to make a search feature that allows users to filter the content by the text in them. After you're done making it, integrate it with the content feed but place it above the filter by creator
-  **Result:**
+
+**Prompt:** I also want you to make a search feature that allows users to filter the content by the text in them. After you're done making it, integrate it with the content feed but place it above the filter by creator
+**Result:**
 - What worked immediately: It made a working search feature in the location that I wanted it to.
 - What needed fixing: Nothing. It worked on first try.
 - What we learned: AI is really good at creating simple stuff.
+
+**Prompt:** Create a sidebar that consists of suggested profiles component and a content feed component. The suggest profiles component should show a list of creators with their connection count. The content feed should show a list of posts that include their title, author, and the time it was created. Also indicate where the post is from by including the logo of the social media platform next to the post.
+**Result:**
+- What worked immediately: It included all the components that I asked it to create.
+- What needed fixing: It didn't work, so I had to find a way to make it functional.
+- What we learned: On its own, AI can help design things, but not connect everything together. It needs more information to be able to make the features functional.
+
+**Prompt:** [Included photo of navbar] Help me recreate this navbar in my app
+**Result:**
+- What worked immediately: The navbar was created, but lacked the logo and a functional contact button. Nothing happened when clicked. 
+- What needed fixing: The logo needed to be added. Then a separate prompt was used to make the contact button work. "We need to make the contact button functional. On click have it open up mail to this email ckn9573@nyu.edu with a subject line template of Muse - Support Ticket”
+- What we learned: AI can be misleading. Without looking at the code or trying to actually interact with the product, if you’re not paying attention you might assume it worked.
 
 ## Best Practices Discovered
 
