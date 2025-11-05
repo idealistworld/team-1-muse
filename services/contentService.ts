@@ -14,10 +14,6 @@ interface CreatorContentWithProfile extends CreatorContent {
   };
 }
 
-interface UserFollowRow {
-  creator_id: number;
-}
-
 export class ContentService {
   private supabase = createClient();
 
@@ -107,37 +103,112 @@ export class ContentService {
   }
 
   async fetchCreators(userId?: string): Promise<Profile[]> {
-    const { data } = await this.supabase
+    if (!userId) {
+      return this.fetchAllCreators();
+    }
+
+    const { data, error } = await this.supabase
+      .from("user_follows")
+      .select(
+        `
+          id,
+          creator_id,
+          created_at,
+          creator_profiles (
+            creator_id,
+            profile_url,
+            platform,
+            created_at,
+            updated_at
+          )
+        `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data) return [];
+
+    const rows = (data ?? []) as Array<{
+      creator_profiles?: CreatorProfile | CreatorProfile[] | null;
+    }>;
+
+    return rows
+      .map((row) =>
+        Array.isArray(row.creator_profiles)
+          ? row.creator_profiles[0] ?? null
+          : row.creator_profiles ?? null
+      )
+      .filter((profile): profile is CreatorProfile => profile !== null)
+      .map((creator) => this.toProfile(creator, { isFollowed: true }));
+  }
+
+  async fetchSuggestedCreators(userId?: string | null): Promise<Profile[]> {
+    if (!userId) {
+      return this.fetchAllCreators();
+    }
+
+    const { data: followed, error: followedError } = await this.supabase
+      .from("user_follows")
+      .select("creator_id")
+      .eq("user_id", userId);
+
+    if (followedError) {
+      throw new Error(followedError.message);
+    }
+
+    const followedIds = new Set(
+      (followed ?? [])
+        .map((row) => row.creator_id)
+        .filter(
+          (id): id is NonNullable<typeof id> => id !== null && id !== undefined
+        )
+        .map((id) => String(id))
+    );
+
+    const { data, error } = await this.supabase
       .from("creator_profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!data) return [];
-
-    let followedCreators = new Set<number>();
-
-    if (userId) {
-      const { data: follows, error } = await this.supabase
-        .from("user_follows")
-        .select("creator_id")
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error("Failed to load followed creators", error);
-      } else if (follows) {
-        followedCreators = new Set(
-          (follows as UserFollowRow[]).map((follow) => follow.creator_id)
-        );
-      }
+    if (error) {
+      throw new Error(error.message);
     }
 
-    // Transform CreatorProfile to Profile format for UI
-    return data.map((creator: CreatorProfile) => ({
+    return ((data ?? []) as CreatorProfile[])
+      .filter((creator) => !followedIds.has(String(creator.creator_id)))
+      .map((creator) => this.toProfile(creator, { isFollowed: false }));
+  }
+
+  private async fetchAllCreators(): Promise<Profile[]> {
+    const { data, error } = await this.supabase
+      .from("creator_profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load all creators", error);
+      return [];
+    }
+
+    return ((data ?? []) as CreatorProfile[]).map((creator) =>
+      this.toProfile(creator)
+    );
+  }
+
+  private toProfile(
+    creator: CreatorProfile,
+    overrides?: Partial<Profile>
+  ): Profile {
+    return {
       id: creator.creator_id,
       name: this.extractNameFromUrl(creator.profile_url),
       connections: creator.platform,
-      isFollowed: followedCreators.has(creator.creator_id),
-    }));
+      isFollowed: overrides?.isFollowed ?? false,
+    };
   }
 
   private extractNameFromUrl(url: string): string {

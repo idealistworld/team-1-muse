@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { ContentPost, Profile } from "@/types";
 import { contentService } from "@/services/contentService";
 import { toast } from "react-toastify";
@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js";
 export function useCreatePostViewModel() {
   const [contentFeed, setContentFeed] = useState<ContentPost[]>([]);
   const [creatorProfiles, setCreatorProfiles] = useState<Profile[]>([]);
+  const [suggestedProfiles, setSuggestedProfiles] = useState<Profile[]>([]);
   const [pendingCreatorIds, setPendingCreatorIds] = useState<Set<number>>(
     new Set<number>()
   );
@@ -57,35 +58,76 @@ export function useCreatePostViewModel() {
     };
   }, [supabase]);
 
-  // Fetch creator content and profiles from service
+  // Fetch creator content for the feed
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchData() {
+    async function fetchContent() {
       try {
-        const [posts, creators] = await Promise.all([
-          contentService.fetchCreatorContent(),
-          contentService.fetchCreators(user?.id ?? undefined),
-        ]);
-        if (isMounted) {
-          setContentFeed(posts);
-          setCreatorProfiles(creators);
-          setPendingCreatorIds(new Set<number>());
-        }
+        const posts = await contentService.fetchCreatorContent();
+        if (!isMounted) return;
+        setContentFeed(posts);
       } catch (error) {
-        if (isMounted) {
-          toast.error("Failed to load content. Please try again.");
-          console.error("Error fetching data:", error);
-        }
+        if (!isMounted) return;
+        toast.error("Failed to load content. Please try again.");
+        console.error("Error fetching content feed:", error);
       }
     }
 
-    fetchData();
+    fetchContent();
 
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, []);
+
+  const refreshFollowedCreators = useCallback(
+    async (options: { silent?: boolean } = {}) => {
+      if (!user?.id) {
+        setCreatorProfiles([]);
+        setPendingCreatorIds(new Set<number>());
+        return true;
+      }
+
+      try {
+        const creators = await contentService.fetchCreators(user.id);
+        setCreatorProfiles(creators);
+        setPendingCreatorIds(new Set<number>());
+        return true;
+      } catch (error) {
+        if (!options.silent) {
+          toast.error("Failed to load followed creators. Please try again.");
+        }
+        console.error("Error fetching followed creators:", error);
+        return false;
+      }
+    },
+    [user?.id]
+  );
+
+  useEffect(() => {
+    refreshFollowedCreators();
+  }, [refreshFollowedCreators]);
+
+  const refreshSuggestedProfiles = useCallback(
+    async (currentUserId?: string | null) => {
+      try {
+        const profiles = await contentService.fetchSuggestedCreators(
+          currentUserId
+        );
+        setSuggestedProfiles(profiles);
+      } catch (error) {
+        setSuggestedProfiles([]);
+        toast.error("Failed to load suggested creators. Please try again.");
+        console.error("Error fetching suggested creators:", error);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    refreshSuggestedProfiles(user?.id);
+  }, [user?.id, refreshSuggestedProfiles]);
 
   // Toggle post highlight state
   function togglePostHighlight(postId: number) {
@@ -168,11 +210,8 @@ export function useCreatePostViewModel() {
       return;
     }
 
-    const targetProfile = creatorProfiles.find(
-      (profile) => profile.id === creatorId
-    );
-
-    if (!targetProfile || targetProfile.isFollowed) {
+    if (creatorProfiles.some((profile) => profile.id === creatorId)) {
+      toast.info("You're already following this creator.");
       return;
     }
 
@@ -181,14 +220,6 @@ export function useCreatePostViewModel() {
       toast.error("Session expired. Please sign in again.");
       return;
     }
-
-    const previousState = targetProfile.isFollowed;
-
-    setCreatorProfiles((prevProfiles) =>
-      prevProfiles.map((profile) =>
-        profile.id === creatorId ? { ...profile, isFollowed: true } : profile
-      )
-    );
 
     setPending(creatorId, true);
 
@@ -211,15 +242,17 @@ export function useCreatePostViewModel() {
       }
 
       toast.success("Creator followed.");
+      if (user?.id) {
+        setSuggestedProfiles((prev) =>
+          prev.filter((profile) => profile.id !== creatorId)
+        );
+        const refreshed = await refreshFollowedCreators({ silent: true });
+        await refreshSuggestedProfiles(user.id);
+        if (!refreshed) {
+          toast.warn("Creator list may be out of date. Please refresh.");
+        }
+      }
     } catch (error) {
-      setCreatorProfiles((prevProfiles) =>
-        prevProfiles.map((profile) =>
-          profile.id === creatorId
-            ? { ...profile, isFollowed: previousState }
-            : profile
-        )
-      );
-
       const message =
         error instanceof Error ? error.message : "Failed to follow creator.";
       toast.error(message);
@@ -238,11 +271,7 @@ export function useCreatePostViewModel() {
       return;
     }
 
-    const targetProfile = creatorProfiles.find(
-      (profile) => profile.id === creatorId
-    );
-
-    if (!targetProfile || !targetProfile.isFollowed) {
+    if (!creatorProfiles.some((profile) => profile.id === creatorId)) {
       return;
     }
 
@@ -252,12 +281,10 @@ export function useCreatePostViewModel() {
       return;
     }
 
-    const previousState = targetProfile.isFollowed;
+    const previousProfiles = creatorProfiles;
 
     setCreatorProfiles((prevProfiles) =>
-      prevProfiles.map((profile) =>
-        profile.id === creatorId ? { ...profile, isFollowed: false } : profile
-      )
+      prevProfiles.filter((profile) => profile.id !== creatorId)
     );
 
     setPending(creatorId, true);
@@ -281,14 +308,15 @@ export function useCreatePostViewModel() {
       }
 
       toast.success("Creator unfollowed.");
+      if (user?.id) {
+        const refreshed = await refreshFollowedCreators({ silent: true });
+        await refreshSuggestedProfiles(user.id);
+        if (!refreshed) {
+          toast.warn("Creator list may be out of date. Please refresh.");
+        }
+      }
     } catch (error) {
-      setCreatorProfiles((prevProfiles) =>
-        prevProfiles.map((profile) =>
-          profile.id === creatorId
-            ? { ...profile, isFollowed: previousState }
-            : profile
-        )
-      );
+      setCreatorProfiles(previousProfiles);
 
       const message =
         error instanceof Error
@@ -317,5 +345,6 @@ export function useCreatePostViewModel() {
     clearSearchQuery,
     followCreator,
     unfollowCreator,
+    suggestedProfiles,
   };
 }

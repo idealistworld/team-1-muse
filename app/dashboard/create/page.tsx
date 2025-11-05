@@ -4,16 +4,16 @@ import { useState } from "react";
 import { ContentFeed } from "@/app/dashboard/components/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
 import { CreatorProfiles } from "../components/CreatorProfiles";
-import { ProfileCard } from "@/app/dashboard/components/ProfileCard";
 import { SuggestedEditsCard } from "../components/SuggestedEditsCard";
 import { PostViewModal } from "../components/PostViewModal";
 import { InspiredByContent } from "../components/InspiredByContent";
-import type { ContentPost, Profile } from "@/types";
+import type { ContentPost } from "@/types";
 
 export default function CreatePostPage() {
   const {
     filteredContentFeed,
     creatorProfiles,
+    suggestedProfiles,
     pendingCreatorIds,
     followCreator,
     unfollowCreator,
@@ -25,6 +25,7 @@ export default function CreatePostPage() {
     setSearchQuery,
   } = useCreatePostViewModel();
   const highlightedPosts = getHighlightedPosts();
+  const suggestions = suggestedProfiles;
   const [expandedPost, setExpandedPost] = useState<ContentPost | null>(null);
 
   function handleExpandPost(post: ContentPost) {
@@ -62,38 +63,26 @@ export default function CreatePostPage() {
             <CreatorProfiles
               profiles={creatorProfiles}
               profileCount={creatorProfiles.length}
+              title="Creator Profiles"
               onFollow={followCreator}
               onUnfollow={unfollowCreator}
               pendingCreatorIds={pendingCreatorIds}
             />
 
-            <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">
-              <div className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
-                Suggested Profiles • {creatorProfiles.length} following
-              </div>
-
-              {/* If creatorProfiles has data we can map it.
-                 Adjust property names if yours are different. */}
-              {creatorProfiles.length > 0 ? (
-                creatorProfiles.map((p: Profile & { followers?: string }) => (
-                  <ProfileCard
-                    key={p.id ?? p.name}
-                    name={p.name}
-                    connections={
-                      p.followers || p.connections || "10K connections"
-                    }
-                  />
-                ))
-              ) : (
-                <>
-                  <ProfileCard name="Creator 1" connections="10K connections" />
-                  <ProfileCard
-                    name="Creator 2"
-                    connections="8.2K connections"
-                  />
-                </>
-              )}
-            </div>
+            <CreatorProfiles
+              profiles={suggestions}
+              profileCount={suggestions.length}
+              title="Suggested Profiles"
+              countLabel={`${suggestions.length}`}
+              onFollow={followCreator}
+              pendingCreatorIds={pendingCreatorIds}
+              emptyState={
+                <div className="rounded-xl bg-[#F6F7F6] px-3 py-4 text-xs text-[#696969]">
+                  You&apos;re following everyone right now. We&apos;ll show new
+                  creators here once there are suggestions.
+                </div>
+              }
+            />
           </div>
 
           {/* Middle Column - Inspired By / Main Content */}
