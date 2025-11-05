@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ContentPost, Profile } from "@/types";
 import { contentService } from "@/services/contentService";
 import { toast } from "react-toastify";
@@ -8,24 +8,51 @@ import type { User } from "@supabase/supabase-js";
 export function useCreatePostViewModel() {
   const [contentFeed, setContentFeed] = useState<ContentPost[]>([]);
   const [creatorProfiles, setCreatorProfiles] = useState<Profile[]>([]);
+  const [pendingCreatorIds, setPendingCreatorIds] = useState<Set<number>>(
+    new Set<number>()
+  );
   const [user, setUser] = useState<User | null>(null);
-  const [selectedCreatorId, setSelectedCreatorId] = useState<number | null>(null);
+  const [selectedCreatorId, setSelectedCreatorId] = useState<number | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+
+  function setPending(creatorId: number, pending: boolean) {
+    setPendingCreatorIds((prev) => {
+      const next = new Set(prev);
+      if (pending) {
+        next.add(creatorId);
+      } else {
+        next.delete(creatorId);
+      }
+      return next;
+    });
+  }
+
+  async function getAccessToken(): Promise<string | null> {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  }
 
   // Fetch user session
   useEffect(() => {
+    let isMounted = true;
+
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!isMounted) return;
       setUser(user);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
+        if (!isMounted) return;
         setUser(session?.user ?? null);
       }
     );
 
     return () => {
+      isMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, [supabase]);
@@ -38,11 +65,12 @@ export function useCreatePostViewModel() {
       try {
         const [posts, creators] = await Promise.all([
           contentService.fetchCreatorContent(),
-          contentService.fetchCreators(),
+          contentService.fetchCreators(user?.id ?? undefined),
         ]);
         if (isMounted) {
           setContentFeed(posts);
           setCreatorProfiles(creators);
+          setPendingCreatorIds(new Set<number>());
         }
       } catch (error) {
         if (isMounted) {
@@ -57,7 +85,7 @@ export function useCreatePostViewModel() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   // Toggle post highlight state
   function togglePostHighlight(postId: number) {
@@ -120,9 +148,155 @@ export function useCreatePostViewModel() {
       setContentFeed((prevFeed) =>
         prevFeed.map((post) => ({ ...post, isHighlighted: false }))
       );
-      toast.success(`Cleared ${highlightCount} highlighted post${highlightCount > 1 ? 's' : ''}`);
+      toast.success(
+        `Cleared ${highlightCount} highlighted post${
+          highlightCount > 1 ? "s" : ""
+        }`
+      );
     } else {
       toast.info("No highlights to clear");
+    }
+  }
+
+  async function followCreator(creatorId: number) {
+    if (!user) {
+      toast.error("Please sign in to follow creators.");
+      return;
+    }
+
+    if (pendingCreatorIds.has(creatorId)) {
+      return;
+    }
+
+    const targetProfile = creatorProfiles.find(
+      (profile) => profile.id === creatorId
+    );
+
+    if (!targetProfile || targetProfile.isFollowed) {
+      return;
+    }
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      toast.error("Session expired. Please sign in again.");
+      return;
+    }
+
+    const previousState = targetProfile.isFollowed;
+
+    setCreatorProfiles((prevProfiles) =>
+      prevProfiles.map((profile) =>
+        profile.id === creatorId ? { ...profile, isFollowed: true } : profile
+      )
+    );
+
+    setPending(creatorId, true);
+
+    try {
+      const response = await fetch("/api/creators/follow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ creatorId }),
+      });
+
+      const payload: { error?: string } = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error ?? "Failed to follow creator.");
+      }
+
+      toast.success("Creator followed.");
+    } catch (error) {
+      setCreatorProfiles((prevProfiles) =>
+        prevProfiles.map((profile) =>
+          profile.id === creatorId
+            ? { ...profile, isFollowed: previousState }
+            : profile
+        )
+      );
+
+      const message =
+        error instanceof Error ? error.message : "Failed to follow creator.";
+      toast.error(message);
+    } finally {
+      setPending(creatorId, false);
+    }
+  }
+
+  async function unfollowCreator(creatorId: number) {
+    if (!user) {
+      toast.error("Please sign in to unfollow creators.");
+      return;
+    }
+
+    if (pendingCreatorIds.has(creatorId)) {
+      return;
+    }
+
+    const targetProfile = creatorProfiles.find(
+      (profile) => profile.id === creatorId
+    );
+
+    if (!targetProfile || !targetProfile.isFollowed) {
+      return;
+    }
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      toast.error("Session expired. Please sign in again.");
+      return;
+    }
+
+    const previousState = targetProfile.isFollowed;
+
+    setCreatorProfiles((prevProfiles) =>
+      prevProfiles.map((profile) =>
+        profile.id === creatorId ? { ...profile, isFollowed: false } : profile
+      )
+    );
+
+    setPending(creatorId, true);
+
+    try {
+      const response = await fetch("/api/creators/unfollow", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ creatorId }),
+      });
+
+      const payload: { error?: string } = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error ?? "Failed to unfollow creator.");
+      }
+
+      toast.success("Creator unfollowed.");
+    } catch (error) {
+      setCreatorProfiles((prevProfiles) =>
+        prevProfiles.map((profile) =>
+          profile.id === creatorId
+            ? { ...profile, isFollowed: previousState }
+            : profile
+        )
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to unfollow creator.";
+      toast.error(message);
+    } finally {
+      setPending(creatorId, false);
     }
   }
 
@@ -130,6 +304,7 @@ export function useCreatePostViewModel() {
     contentFeed,
     filteredContentFeed,
     creatorProfiles,
+    pendingCreatorIds,
     user,
     togglePostHighlight,
     getHighlightedPosts,
@@ -140,5 +315,7 @@ export function useCreatePostViewModel() {
     searchQuery,
     setSearchQuery,
     clearSearchQuery,
+    followCreator,
+    unfollowCreator,
   };
 }

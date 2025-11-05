@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
-import type { ContentPost, CreatorContent, CreatorProfile, Profile } from "@/types";
+import type {
+  ContentPost,
+  CreatorContent,
+  CreatorProfile,
+  Profile,
+} from "@/types";
 
 interface CreatorContentWithProfile extends CreatorContent {
   creator_profiles: {
@@ -7,6 +12,10 @@ interface CreatorContentWithProfile extends CreatorContent {
     profile_url: string;
     platform: string;
   };
+}
+
+interface UserFollowRow {
+  creator_id: number;
 }
 
 export class ContentService {
@@ -32,10 +41,9 @@ export class ContentService {
       // Extract title from post_raw (first line or first 60 chars)
       let title = "Some Cool Post Title";
       if (item.post_raw) {
-        const firstLine = item.post_raw.split('\n')[0];
-        title = firstLine.length > 60
-          ? firstLine.substring(0, 60) + "..."
-          : firstLine;
+        const firstLine = item.post_raw.split("\n")[0];
+        title =
+          firstLine.length > 60 ? firstLine.substring(0, 60) + "..." : firstLine;
       }
 
       // Calculate time ago
@@ -43,10 +51,15 @@ export class ContentService {
       const now = new Date();
       const diffMs = now.getTime() - createdDate.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const timeAgo = diffDays === 0 ? "Today" : `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      const timeAgo =
+        diffDays === 0
+          ? "Today"
+          : `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 
       // Extract author name from profile URL
-      const authorName = this.extractNameFromUrl(item.creator_profiles.profile_url);
+      const authorName = this.extractNameFromUrl(
+        item.creator_profiles.profile_url
+      );
 
       return {
         id: item.content_id,
@@ -93,7 +106,7 @@ export class ContentService {
     });
   }
 
-  async fetchCreators(): Promise<Profile[]> {
+  async fetchCreators(userId?: string): Promise<Profile[]> {
     const { data } = await this.supabase
       .from("creator_profiles")
       .select("*")
@@ -101,11 +114,29 @@ export class ContentService {
 
     if (!data) return [];
 
+    let followedCreators = new Set<number>();
+
+    if (userId) {
+      const { data: follows, error } = await this.supabase
+        .from("user_follows")
+        .select("creator_id")
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("Failed to load followed creators", error);
+      } else if (follows) {
+        followedCreators = new Set(
+          (follows as UserFollowRow[]).map((follow) => follow.creator_id)
+        );
+      }
+    }
+
     // Transform CreatorProfile to Profile format for UI
     return data.map((creator: CreatorProfile) => ({
       id: creator.creator_id,
       name: this.extractNameFromUrl(creator.profile_url),
       connections: creator.platform,
+      isFollowed: followedCreators.has(creator.creator_id),
     }));
   }
 

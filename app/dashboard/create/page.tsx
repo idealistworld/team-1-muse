@@ -14,6 +14,9 @@ export default function CreatePostPage() {
   const {
     filteredContentFeed,
     creatorProfiles,
+    pendingCreatorIds,
+    followCreator,
+    unfollowCreator,
     togglePostHighlight,
     getHighlightedPosts,
     selectedCreatorId,
@@ -59,6 +62,9 @@ export default function CreatePostPage() {
             <CreatorProfiles
               profiles={creatorProfiles}
               profileCount={creatorProfiles.length}
+              onFollow={followCreator}
+              onUnfollow={unfollowCreator}
+              pendingCreatorIds={pendingCreatorIds}
             />
 
             <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">

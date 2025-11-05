@@ -13,6 +13,7 @@ export interface Profile {
   id: number;
   name: string;
   connections: string;
+  isFollowed: boolean;
 }
 
 export interface CreatorProfile {
