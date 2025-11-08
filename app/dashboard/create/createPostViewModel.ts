@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { ContentPost, Profile } from "@/types";
 import { contentService } from "@/services/contentService";
+import { followCreator as followCreatorApi, unfollowCreator as unfollowCreatorApi } from "@/services/creatorClient";
 import { toast } from "react-toastify";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -95,15 +96,19 @@ export function useCreatePostViewModel() {
 
     setContentFeed((prevFeed) =>
       prevFeed.map((post) =>
+        // If highlighting this post, unhighlight all others
+        // If unhighlighting, just unhighlight this one
         post.id === postId
           ? { ...post, isHighlighted: !post.isHighlighted }
+          : newState
+          ? { ...post, isHighlighted: false }
           : post
       )
     );
 
     // Show toast after state update
     toast.info(
-      newState ? "Post added to highlights" : "Post removed from highlights"
+      newState ? "Post selected for inspiration" : "Post deselected"
     );
   }
 
@@ -193,23 +198,7 @@ export function useCreatePostViewModel() {
     setPending(creatorId, true);
 
     try {
-      const response = await fetch("/api/creators/follow", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ creatorId }),
-      });
-
-      const payload: { error?: string } = await response
-        .json()
-        .catch(() => ({}));
-
-      if (!response.ok || payload.error) {
-        throw new Error(payload.error ?? "Failed to follow creator.");
-      }
-
+      await followCreatorApi(creatorId, accessToken);
       toast.success("Creator followed.");
     } catch (error) {
       setCreatorProfiles((prevProfiles) =>
@@ -263,23 +252,7 @@ export function useCreatePostViewModel() {
     setPending(creatorId, true);
 
     try {
-      const response = await fetch("/api/creators/unfollow", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ creatorId }),
-      });
-
-      const payload: { error?: string } = await response
-        .json()
-        .catch(() => ({}));
-
-      if (!response.ok || payload.error) {
-        throw new Error(payload.error ?? "Failed to unfollow creator.");
-      }
-
+      await unfollowCreatorApi(creatorId, accessToken);
       toast.success("Creator unfollowed.");
     } catch (error) {
       setCreatorProfiles((prevProfiles) =>

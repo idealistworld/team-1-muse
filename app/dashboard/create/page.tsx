@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { ContentFeed } from "@/app/dashboard/components/ContentFeed";
+import React, { useState } from "react";
+import { ContentFeed } from "@/app/dashboard/components/ContentFeed/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
-import { CreatorProfiles } from "../components/CreatorProfiles";
-import { ProfileCard } from "@/app/dashboard/components/ProfileCard";
-import { SuggestedEditsCard } from "../components/SuggestedEditsCard";
+import { useContentEditorViewModel } from "./contentEditorViewModel";
+import { CreatorProfiles } from "../components/CreatorProfiles/CreatorProfiles";
+import { EditHistory } from "../components/EditHistory/EditHistory";
 import { PostViewModal } from "../components/PostViewModal";
-import { InspiredByContent } from "../components/InspiredByContent";
-import type { ContentPost, Profile } from "@/types";
+import { useSuggestedEditsViewModel } from "../components/SuggestedEditsCard/suggestedEditsViewModel";
+import { ContextGatheringModal } from "../components/ContextGatheringModal/ContextGatheringModal";
+import { ContentEditorCard } from "./components/ContentEditorCard";
+import { InspirationPostsCard } from "./components/InspirationPostsCard";
+import { AIAssistantPanel } from "./components/AIAssistantPanel";
+import type { ContentPost } from "@/types";
 
 export default function CreatePostPage() {
   const {
@@ -19,13 +23,39 @@ export default function CreatePostPage() {
     unfollowCreator,
     togglePostHighlight,
     getHighlightedPosts,
-    selectedCreatorId,
-    setSelectedCreatorId,
     searchQuery,
     setSearchQuery,
   } = useCreatePostViewModel();
   const highlightedPosts = getHighlightedPosts();
   const [expandedPost, setExpandedPost] = useState<ContentPost | null>(null);
+
+  // Use content editor view model
+  const {
+    userContent,
+    setUserContent,
+    isGeneratingInitial,
+    showContextModal,
+    conversationHistory,
+    handleContextComplete,
+    handleContextSkip,
+    getPostContent,
+  } = useContentEditorViewModel(highlightedPosts);
+
+  // Build context from conversation for edits
+  const userContext = React.useMemo(() => {
+    const context: Record<string, string> = {};
+    for (let i = 0; i < conversationHistory.length; i += 2) {
+      const question = conversationHistory[i]?.content;
+      const answer = conversationHistory[i + 1]?.content;
+      if (question && answer) {
+        context[question] = answer;
+      }
+    }
+    return Object.keys(context).length > 0 ? context : undefined;
+  }, [conversationHistory]);
+
+  // Use suggested edits view model
+  const editsVm = useSuggestedEditsViewModel(userContent, userContext);
 
   function handleExpandPost(post: ContentPost) {
     setExpandedPost(post);
@@ -42,7 +72,13 @@ export default function CreatePostPage() {
         content={expandedPost?.postRaw}
         postUrl={expandedPost?.postUrl}
       />
-      <div className="min-h-screen bg-[#F7F6F7] p-4">
+      <ContextGatheringModal
+        isOpen={showContextModal}
+        postContent={getPostContent()}
+        onComplete={handleContextComplete}
+        onSkip={handleContextSkip}
+      />
+      <div className="min-h-screen bg-white p-4">
         {/* Three Column Layout */}
         <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto">
           {/* Left Column - Sidebar */}
@@ -52,9 +88,6 @@ export default function CreatePostPage() {
               postCount={filteredContentFeed.length}
               onTogglePost={togglePostHighlight}
               onExpandPost={handleExpandPost}
-              creatorProfiles={creatorProfiles}
-              selectedCreatorId={selectedCreatorId}
-              onCreatorFilterChange={(value) => setSelectedCreatorId(value)}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />
@@ -66,48 +99,51 @@ export default function CreatePostPage() {
               onUnfollow={unfollowCreator}
               pendingCreatorIds={pendingCreatorIds}
             />
-
-            <div className="rounded-2xl border border-[#E1E1E1] bg-white p-4 space-y-3">
-              <div className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
-                Suggested Profiles • {creatorProfiles.length} following
-              </div>
-
-              {/* If creatorProfiles has data we can map it.
-                 Adjust property names if yours are different. */}
-              {creatorProfiles.length > 0 ? (
-                creatorProfiles.map((p: Profile & { followers?: string }) => (
-                  <ProfileCard
-                    key={p.id ?? p.name}
-                    name={p.name}
-                    connections={
-                      p.followers || p.connections || "10K connections"
-                    }
-                  />
-                ))
-              ) : (
-                <>
-                  <ProfileCard name="Creator 1" connections="10K connections" />
-                  <ProfileCard
-                    name="Creator 2"
-                    connections="8.2K connections"
-                  />
-                </>
-              )}
-            </div>
           </div>
 
-          {/* Middle Column - Inspired By / Main Content */}
-          <InspiredByContent highlightedPosts={highlightedPosts} />
+          {/* Middle Column - Your Content */}
+          <div className="space-y-4">
+            <ContentEditorCard
+              userContent={userContent}
+              setUserContent={setUserContent}
+              isGeneratingInitial={isGeneratingInitial}
+              currentVersion={editsVm.currentVersion}
+              onAcceptEdit={() => {
+                if (editsVm.currentVersion) {
+                  setUserContent(editsVm.currentVersion.suggestedText);
+                }
+                editsVm.handleReset();
+              }}
+              onRejectEdit={editsVm.handleReset}
+            />
 
-          {/* Right Column - Suggested Edits */}
-          <div>
-            {highlightedPosts.length > 0 ? (
-              <SuggestedEditsCard className="bg-[#FFFEFE]" />
-            ) : (
-              <div className="bg-[#FFFEFE] rounded-2xl border border-[#E1E1E1] p-6 text-center text-[#696969]">
-                Select posts to see suggested edits
-              </div>
-            )}
+            <InspirationPostsCard posts={highlightedPosts} />
+          </div>
+
+          {/* Right Column - AI Assistant Controls */}
+          <div className="space-y-4">
+            <AIAssistantPanel
+              isAiActive={editsVm.isAiActive}
+              isVoiceMode={editsVm.isVoiceMode}
+              toggleVoiceMode={editsVm.toggleVoiceMode}
+              isListening={editsVm.isListening}
+              startListening={editsVm.startListening}
+              stopListening={editsVm.stopListening}
+              feedbackText={editsVm.feedbackText}
+              setFeedbackText={editsVm.setFeedbackText}
+              silenceCountdown={editsVm.silenceCountdown}
+              isGenerating={editsVm.isGenerating}
+              canGenerate={userContent.trim() !== "" && editsVm.feedbackText.trim() !== ""}
+              generateEdit={editsVm.generateEdit}
+              versionHistoryCount={editsVm.versionHistory.length}
+              onClearAll={editsVm.handleClearAll}
+            />
+
+            <EditHistory
+              versionHistory={editsVm.versionHistory}
+              onCopyVersion={editsVm.handleCopyVersion}
+              className="bg-white"
+            />
           </div>
         </div>
       </div>

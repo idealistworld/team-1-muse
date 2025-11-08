@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   ContentPost,
   CreatorContent,
   CreatorProfile,
   Profile,
 } from "@/types";
+import { extractNameFromUrl, formatPostTitle, formatTimeAgo } from "@/lib/formatters";
 
 interface CreatorContentWithProfile extends CreatorContent {
   creator_profiles: {
@@ -37,41 +39,16 @@ export class ContentService {
     if (!data) return [];
 
     // Transform database data to ContentPost format
-    return data.map((item: CreatorContentWithProfile, index: number) => {
-      // Extract title from post_raw (first line or first 60 chars)
-      let title = "Some Cool Post Title";
-      if (item.post_raw) {
-        const firstLine = item.post_raw.split("\n")[0];
-        title =
-          firstLine.length > 60 ? firstLine.substring(0, 60) + "..." : firstLine;
-      }
-
-      // Calculate time ago
-      const createdDate = new Date(item.created_at);
-      const now = new Date();
-      const diffMs = now.getTime() - createdDate.getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const timeAgo =
-        diffDays === 0
-          ? "Today"
-          : `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-
-      // Extract author name from profile URL
-      const authorName = this.extractNameFromUrl(
-        item.creator_profiles.profile_url
-      );
-
-      return {
-        id: item.content_id,
-        title,
-        author: authorName,
-        timeAgo,
-        isHighlighted: index === 0, // Highlight first post by default
-        creatorId: item.creator_id,
-        postUrl: item.post_url,
-        postRaw: item.post_raw,
-      };
-    });
+    return data.map((item: CreatorContentWithProfile) => ({
+      id: item.content_id,
+      title: formatPostTitle(item.post_raw),
+      author: extractNameFromUrl(item.creator_profiles.profile_url),
+      timeAgo: formatTimeAgo(item.created_at),
+      isHighlighted: false,
+      creatorId: item.creator_id,
+      postUrl: item.post_url,
+      postRaw: item.post_raw,
+    }));
   }
 
   async fetchCreatorContentById(creatorId: number): Promise<ContentPost[]> {
@@ -134,22 +111,26 @@ export class ContentService {
     // Transform CreatorProfile to Profile format for UI
     return data.map((creator: CreatorProfile) => ({
       id: creator.creator_id,
-      name: this.extractNameFromUrl(creator.profile_url),
+      name: extractNameFromUrl(creator.profile_url),
       connections: creator.platform,
       isFollowed: followedCreators.has(creator.creator_id),
     }));
   }
 
-  private extractNameFromUrl(url: string): string {
-    // Extract username/name from profile URL
-    // For LinkedIn: https://www.linkedin.com/in/username -> username
-    try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split("/").filter(Boolean);
-      return pathParts[pathParts.length - 1] || "Unknown";
-    } catch {
-      return "Unknown";
+  /**
+   * Server-side method: Get all creator content (for API routes)
+   */
+  async getAllCreatorContent(supabase: SupabaseClient): Promise<CreatorContent[]> {
+    const { data, error } = await supabase
+      .from("creator_content")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
     }
+
+    return data || [];
   }
 }
 

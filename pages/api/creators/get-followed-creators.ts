@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { creatorService } from "@/services/creatorService";
 
 /**
  * GET /api/creators/get-followed-creators
@@ -33,24 +34,12 @@ export default async function handler(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Query creator_profiles that the user follows
-  // This joins user_follows with creator_profiles
-  const { data, error } = await supabase
-    .from("user_follows")
-    .select(`
-      creator_id,
-      created_at,
-      creator_profiles (*)
-    `)
-    .eq("user_id", user_id)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
+  try {
+    const creators = await creatorService.getFollowedCreatorsWithProfiles(supabase, user_id);
+    return res.status(200).json({ data: creators });
+  } catch (error) {
+    console.error("Get followed creators error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return res.status(500).json({ error: errorMessage });
   }
-
-  // Extract the creator_profiles from the joined data
-  const creators = data?.map((follow) => follow.creator_profiles) || [];
-
-  return res.status(200).json({ data: creators });
 }
