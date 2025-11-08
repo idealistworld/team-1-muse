@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useContextGatheringViewModel } from "./useContextGatheringViewModel";
-import { CircularCountdown } from "./CircularCountdown";
-import { MuseAvatar } from "./MuseAvatar";
+import { useContextGatheringViewModel } from "./contextGatheringViewModel";
+import { CircularCountdown } from "../shared/CircularCountdown";
+import { MuseAvatar } from "../shared/MuseAvatar";
 
 interface ContextGatheringModalProps {
   isOpen: boolean;

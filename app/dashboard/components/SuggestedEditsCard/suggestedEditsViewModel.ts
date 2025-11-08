@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
+import { aiClient } from "@/services/aiClient";
 
 // Web Speech API type declarations
 interface SpeechRecognitionEvent extends Event {
@@ -18,8 +19,12 @@ interface SpeechRecognition extends EventTarget {
   lang: string;
   maxAlternatives: number;
   onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onresult:
+    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
+    | null;
+  onerror:
+    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
+    | null;
   onend: ((this: SpeechRecognition, ev: Event) => void) | null;
   start(): void;
   stop(): void;
@@ -54,7 +59,9 @@ export function useSuggestedEditsViewModel(
     null
   );
   const [versionHistory, setVersionHistory] = useState<GeneratedVersion[]>([]);
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<
+    ConversationMessage[]
+  >([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
@@ -80,15 +87,20 @@ export function useSuggestedEditsViewModel(
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const SpeechRecognitionAPI = (window as Window & {
-      SpeechRecognition?: new () => SpeechRecognition;
-      webkitSpeechRecognition?: new () => SpeechRecognition;
-    }).SpeechRecognition || (window as Window & {
-      webkitSpeechRecognition?: new () => SpeechRecognition;
-    }).webkitSpeechRecognition;
+    const SpeechRecognitionAPI =
+      (
+        window as Window & {
+          SpeechRecognition?: new () => SpeechRecognition;
+          webkitSpeechRecognition?: new () => SpeechRecognition;
+        }
+      ).SpeechRecognition ||
+      (
+        window as Window & {
+          webkitSpeechRecognition?: new () => SpeechRecognition;
+        }
+      ).webkitSpeechRecognition;
 
     if (!SpeechRecognitionAPI) {
-      console.log("Speech recognition not supported");
       return;
     }
 
@@ -99,11 +111,10 @@ export function useSuggestedEditsViewModel(
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log("Speech recognition started");
+      // Speech recognition started
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      console.log("Speech recognition result:", event);
 
       let interimTranscript = "";
       let finalTranscript = "";
@@ -125,7 +136,6 @@ export function useSuggestedEditsViewModel(
 
       // When we get a final result
       if (finalTranscript) {
-        console.log("Final transcript:", finalTranscript);
         setFeedbackText(finalTranscript);
         interimTranscriptRef.current = "";
 
@@ -155,7 +165,6 @@ export function useSuggestedEditsViewModel(
 
         // Set a timeout to stop listening after 3 seconds of silence
         silenceTimeoutRef.current = setTimeout(() => {
-          console.log("Stopping due to silence...");
           setIsListening(false);
           if (recognitionRef.current) {
             recognitionRef.current.stop();
@@ -197,7 +206,6 @@ export function useSuggestedEditsViewModel(
     };
 
     recognition.onend = () => {
-      console.log("Speech recognition ended");
       setIsListening(false);
       setSilenceCountdown(null);
       if (countdownIntervalRef.current) {
@@ -239,7 +247,6 @@ export function useSuggestedEditsViewModel(
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
       }
-      console.log("Starting speech recognition...");
       recognitionRef.current.start();
       toast.info("Listening... Speak now!");
     } catch (error) {
@@ -264,32 +271,15 @@ export function useSuggestedEditsViewModel(
       // Add user's feedback to conversation
       const updatedHistory: ConversationMessage[] = [
         ...conversationHistory,
-        { role: "user", content: feedbackText }
+        { role: "user", content: feedbackText },
       ];
 
-      const response = await fetch("/api/ai/generate-edit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: inputText,
-          prompt: feedbackText,
-          context: userContext,
-          conversationHistory: updatedHistory,
-        }),
+      const data = await aiClient.generateEdit({
+        text: inputText,
+        prompt: feedbackText,
+        context: userContext,
+        conversationHistory: updatedHistory,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.suggestedText) {
-        throw new Error("No suggested text returned from API");
-      }
 
       const newVersion: GeneratedVersion = {
         suggestedText: data.suggestedText,
@@ -301,7 +291,7 @@ export function useSuggestedEditsViewModel(
       // Add AI's response to conversation
       setConversationHistory([
         ...updatedHistory,
-        { role: "assistant", content: data.suggestedText }
+        { role: "assistant", content: data.suggestedText },
       ]);
 
       setCurrentVersion(newVersion);
@@ -335,20 +325,10 @@ export function useSuggestedEditsViewModel(
     try {
       setIsPlaying(true);
 
-      const response = await fetch("/api/ai/text-to-speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text,
-          voice: "alloy",
-        }),
+      const audioBlob = await aiClient.generateTextToSpeech({
+        text,
+        voice: "alloy",
       });
-
-      if (!response.ok) throw new Error("Failed to generate speech");
-
-      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
       const audio = new Audio(audioUrl);

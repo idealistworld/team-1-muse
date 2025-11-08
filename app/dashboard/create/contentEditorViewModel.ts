@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { ContentPost } from "@/types";
+import { aiClient } from "@/services/aiClient";
 
 export interface UserContext {
   [key: string]: string;
@@ -68,28 +69,11 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
         }
       }
 
-      console.log("=== CONTEXT DEBUG ===");
-      console.log("Conversation history length:", history.length);
-      console.log("Context being sent to API:", context);
-      console.log("Number of Q&A pairs:", Object.keys(context).length);
-      console.log("====================");
-
-      const response = await fetch("/api/ai/generate-edit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: combinedContent,
-          context,
-        }),
+      const data = await aiClient.generateEdit({
+        text: combinedContent,
+        context,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate content");
-      }
-
-      const data = await response.json();
       setUserContent(data.suggestedText || "");
     } catch (error) {
       console.error("Failed to generate initial content:", error);
@@ -111,22 +95,11 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
         .map((post) => post.postRaw || "")
         .join("\n\n");
 
-      const response = await fetch("/api/ai/generate-edit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: combinedContent,
-          context: {},
-        }),
+      const data = await aiClient.generateEdit({
+        text: combinedContent,
+        context: {},
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate content");
-      }
-
-      const data = await response.json();
       setUserContent(data.suggestedText || "");
     } catch (error) {
       console.error("Failed to generate initial content:", error);

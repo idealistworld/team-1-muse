@@ -3,7 +3,7 @@
  * Shows profile cards with names, platforms, and buttons to follow or unfollow.
  */
 import { ProfileCard } from "./ProfileCard";
-import { CardTitle } from "./CardTitle";
+import { CardTitle } from "../shared/CardTitle";
 import type { Profile } from "@/types";
 
 interface CreatorProfilesProps {

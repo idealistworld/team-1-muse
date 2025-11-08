@@ -1,19 +1,13 @@
-import OpenAI from "openai"
-
-export interface GenerateEditResponse {
-  originalText: string
-  suggestedText: string
-  additions: number
-  deletions: number
-}
+import OpenAI from "openai";
+import type { GenerateEditResponse, AskQuestionResponse } from "@/types/api";
 
 export class OpenAIService {
-  private openai: OpenAI
+  private openai: OpenAI;
 
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPEN_AI_API_KEY,
-    })
+    });
   }
 
   async generateSpeech(
@@ -24,39 +18,83 @@ export class OpenAIService {
       model: "tts-1",
       voice,
       input: text,
-    })
+    });
 
-    return Buffer.from(await mp3.arrayBuffer())
+    return Buffer.from(await mp3.arrayBuffer());
+  }
+
+  async askQuestion(
+    postContent: string,
+    conversationHistory: Array<{ role: "assistant" | "user"; content: string }>
+  ): Promise<AskQuestionResponse> {
+    const systemPrompt = `You are a helpful assistant gathering context to personalize content for a user.
+
+Your goal: Ask the user questions to understand their background, company, industry, experiences, and audience so you can rewrite the provided post authentically for them.
+
+Rules:
+1. ALWAYS ask ONE specific, relevant question at a time
+2. Base follow-up questions on their previous answers
+3. ONLY after you have asked 3-5 meaningful questions AND received answers, respond with ONLY the text: "READY_TO_GENERATE" (nothing else, no explanation, no pleasantries)
+4. If you haven't asked any questions yet, you MUST ask at least one question
+5. Don't ask unnecessary questions - be efficient
+6. Make questions conversational and natural
+
+Post to personalize:
+${postContent}
+
+Current conversation length: ${conversationHistory.length} messages
+
+${conversationHistory.length === 0 ? 'START by asking your first question.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have asked 3-5 questions and have enough context.'}`;
+
+    const messages = [
+      { role: "system" as const, content: systemPrompt },
+      ...conversationHistory,
+    ];
+
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      temperature: 0.7,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim() || "";
+
+    // Check if response contains READY_TO_GENERATE (be lenient with AI being chatty)
+    if (response.includes("READY_TO_GENERATE")) {
+      console.log("AI has enough context, ready to generate");
+      return { ready: true };
+    } else {
+      console.log("AI asking question:", response.substring(0, 100));
+      return { ready: false, question: response };
+    }
   }
 
   async generateEdit(
     text: string,
     prompt?: string,
     context?: {
-      company?: string
-      industry?: string
-      targetAudience?: string
-      personalExperience?: string
-      writingStyle?: string
+      company?: string;
+      industry?: string;
+      targetAudience?: string;
+      personalExperience?: string;
+      writingStyle?: string;
     },
     conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
   ): Promise<GenerateEditResponse> {
-    let contextSection = ""
+    let contextSection = "";
     if (context && Object.keys(context).length > 0) {
       const parts = Object.entries(context).map(([key, value]) => {
         // If key looks like a question (contains "?"), format as Q&A
         if (key.includes("?")) {
-          return `Q: ${key}\nA: ${value}`
+          return `Q: ${key}\nA: ${value}`;
         }
         // Otherwise format as key-value
-        return `${key}: ${value}`
+        return `${key}: ${value}`;
       });
 
-      contextSection = `\n\nIMPORTANT USER CONTEXT:\n${parts.join("\n\n")}\n\nUse this context to make the content authentic, personalized, and relevant to the user's specific situation.`
-
-      console.log("=== GPT CONTEXT SECTION ===");
-      console.log(contextSection);
-      console.log("===========================");
+      contextSection = `\n\nIMPORTANT USER CONTEXT:\n${parts.join(
+        "\n\n"
+      )}\n\nUse this context to make the content authentic, personalized, and relevant to the user's specific situation.`;
     } else {
       console.log("⚠️ No context provided to GPT");
     }
@@ -75,14 +113,17 @@ IMPORTANT RULES:
 7. Make it feel authentic to the user's background and audience
 8. KEEP approximately the same word count as the original (within 10-20%)
 
-Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}`
+Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}`;
 
     // Build messages array
-    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    const messages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }> = [
       {
         role: "system",
         content: systemPrompt,
-      }
+      },
     ];
 
     // If we have conversation history, use it
@@ -116,23 +157,23 @@ Think of this as "translating" the post to the user's world, not writing a new p
       model: "gpt-4o-mini",
       messages,
       temperature: 0.7,
-    })
+    });
 
-    const suggestedText = completion.choices[0]?.message?.content || ""
+    const suggestedText = completion.choices[0]?.message?.content || "";
 
     // Calculate rough additions/deletions
-    const originalWords = text.split(/\s+/).length
-    const suggestedWords = suggestedText.split(/\s+/).length
-    const additions = Math.max(0, suggestedWords - originalWords)
-    const deletions = Math.max(0, originalWords - suggestedWords)
+    const originalWords = text.split(/\s+/).length;
+    const suggestedWords = suggestedText.split(/\s+/).length;
+    const additions = Math.max(0, suggestedWords - originalWords);
+    const deletions = Math.max(0, originalWords - suggestedWords);
 
     return {
       originalText: text,
       suggestedText,
       additions,
       deletions,
-    }
+    };
   }
 }
 
-export const openaiService = new OpenAIService()
+export const openaiService = new OpenAIService();

@@ -5,7 +5,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CardTitle } from "./CardTitle";
+import { CardTitle } from "../shared/CardTitle";
 import { cn } from "@/lib/utils";
 
 interface Version {

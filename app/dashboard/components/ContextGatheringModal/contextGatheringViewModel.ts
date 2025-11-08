@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
+import { aiClient } from "@/services/aiClient";
 
 // Web Speech API type declarations
 interface SpeechRecognitionEvent extends Event {
@@ -72,7 +73,6 @@ export function useContextGatheringViewModel(postContent: string) {
       ).webkitSpeechRecognition;
 
     if (!SpeechRecognitionAPI) {
-      console.log("Speech recognition not supported");
       return;
     }
 
@@ -83,7 +83,7 @@ export function useContextGatheringViewModel(postContent: string) {
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log("Speech recognition started");
+      // Speech recognition started
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -105,7 +105,6 @@ export function useContextGatheringViewModel(postContent: string) {
       }
 
       if (finalTranscript) {
-        console.log("Final transcript:", finalTranscript);
         setCurrentAnswer(finalTranscript);
         interimTranscriptRef.current = "";
 
@@ -132,7 +131,6 @@ export function useContextGatheringViewModel(postContent: string) {
         }, 100);
 
         silenceTimeoutRef.current = setTimeout(() => {
-          console.log("Stopping due to silence...");
           setIsListening(false);
           if (recognitionRef.current) {
             recognitionRef.current.stop();
@@ -174,7 +172,6 @@ export function useContextGatheringViewModel(postContent: string) {
     };
 
     recognition.onend = () => {
-      console.log("Speech recognition ended");
       setIsListening(false);
       setSilenceCountdown(null);
       if (countdownIntervalRef.current) {
@@ -199,22 +196,10 @@ export function useContextGatheringViewModel(postContent: string) {
       setIsAskingQuestion(true);
 
       try {
-        const response = await fetch("/api/ai/ask-question", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            postContent,
-            conversationHistory: [],
-          }),
+        const data = await aiClient.askQuestion({
+          postContent,
+          conversationHistory: [],
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to ask question");
-        }
-
-        const data = await response.json();
 
         if (data.ready) {
           setIsReadyToGenerate(true);
@@ -253,7 +238,6 @@ export function useContextGatheringViewModel(postContent: string) {
 
     // Don't start if already listening
     if (isListening) {
-      console.log("Already listening, skipping start");
       return;
     }
 
@@ -264,7 +248,6 @@ export function useContextGatheringViewModel(postContent: string) {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
       }
-      console.log("Starting speech recognition...");
       recognitionRef.current.start();
       toast.info("Listening... Speak now!");
     } catch (error) {
@@ -294,22 +277,10 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsAskingQuestion(true);
 
     try {
-      const response = await fetch("/api/ai/ask-question", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          postContent,
-          conversationHistory: updatedHistory,
-        }),
+      const data = await aiClient.askQuestion({
+        postContent,
+        conversationHistory: updatedHistory,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to ask next question");
-      }
-
-      const data = await response.json();
 
       if (data.ready) {
         setIsReadyToGenerate(true);

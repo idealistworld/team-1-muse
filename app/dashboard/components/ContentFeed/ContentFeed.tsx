@@ -5,7 +5,7 @@
 "use client";
 
 import { PostCard } from "./PostCard";
-import { CardTitle } from "./CardTitle";
+import { CardTitle } from "../shared/CardTitle";
 import type { ContentPost } from "@/types";
 import { Input } from "@/components/ui/input";
 

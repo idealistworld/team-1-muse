@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useSuggestedEditsViewModel } from "./suggestedEditsViewModel"
-import { DiffView } from "./DiffView"
+import { DiffView } from "../shared/DiffView"
 
 interface SuggestedEditsCardProps {
   className?: string

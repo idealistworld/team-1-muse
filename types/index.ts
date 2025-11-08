@@ -1,3 +1,4 @@
+// Database types
 export interface ContentPost {
   id: number;
   title: string;
@@ -32,3 +33,12 @@ export interface CreatorContent {
   created_at: string;
   updated_at: string;
 }
+
+// Re-export API types for convenience
+export type {
+  GenerateEditRequest,
+  GenerateEditResponse,
+  AskQuestionRequest,
+  AskQuestionResponse,
+  TextToSpeechRequest,
+} from "./api";
