@@ -83,7 +83,7 @@ export class CreatorService {
 
     // Extract the creator_profiles from the joined data
     return (
-      data?.map((follow: UserFollowWithProfile) => follow.creator_profiles) || []
+      data?.map((follow) => follow.creator_profiles as unknown as CreatorProfile) || []
     );
   }
 

@@ -2,11 +2,21 @@
  * API authentication utilities
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import type { NextApiRequest } from "next";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+type AuthSuccess = {
+  supabase: SupabaseClient;
+  user: User;
+};
+
+type AuthError = {
+  error: string;
+  status: 401;
+};
 
 /**
  * Extract access token from request headers or cookies
@@ -24,7 +34,9 @@ export function extractAccessToken(req: NextApiRequest): string | undefined {
 /**
  * Authenticate request and return authenticated Supabase client + user
  */
-export async function authenticateRequest(req: NextApiRequest) {
+export async function authenticateRequest(
+  req: NextApiRequest
+): Promise<AuthSuccess | AuthError> {
   const token = extractAccessToken(req);
 
   if (!token) {

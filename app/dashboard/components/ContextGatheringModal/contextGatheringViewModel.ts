@@ -203,7 +203,7 @@ export function useContextGatheringViewModel(postContent: string) {
 
         if (data.ready) {
           setIsReadyToGenerate(true);
-        } else {
+        } else if (data.question) {
           setConversationHistory([
             { role: "assistant", content: data.question },
           ]);
@@ -284,7 +284,7 @@ export function useContextGatheringViewModel(postContent: string) {
 
       if (data.ready) {
         setIsReadyToGenerate(true);
-      } else {
+      } else if (data.question) {
         setConversationHistory([
           ...updatedHistory,
           { role: "assistant", content: data.question },
