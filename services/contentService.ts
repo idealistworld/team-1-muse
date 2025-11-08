@@ -66,7 +66,7 @@ export class ContentService {
         title,
         author: authorName,
         timeAgo,
-        isHighlighted: index === 0, // Highlight first post by default
+        isHighlighted: false,
         creatorId: item.creator_id,
         postUrl: item.post_url,
         postRaw: item.post_raw,

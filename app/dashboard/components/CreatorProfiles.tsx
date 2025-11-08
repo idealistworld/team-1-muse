@@ -3,8 +3,8 @@
  * Shows profile cards with names, platforms, and buttons to follow or unfollow.
  */
 import { ProfileCard } from "./ProfileCard";
+import { CardTitle } from "./CardTitle";
 import type { Profile } from "@/types";
-import { Loader2, Minus, Plus } from "lucide-react";
 
 interface CreatorProfilesProps {
   profiles: Profile[];
@@ -21,14 +21,17 @@ export function CreatorProfiles({
   onUnfollow,
   pendingCreatorIds,
 }: CreatorProfilesProps) {
+  // Sort profiles: unfollowed first, then followed
+  const sortedProfiles = [...profiles].sort((a, b) => {
+    if (a.isFollowed === b.isFollowed) return 0;
+    return a.isFollowed ? 1 : -1;
+  });
+
   return (
-    <section className="flex w-[378px] flex-col items-start gap-3 rounded-2xl border border-[#E1E1E1] bg-[#FFFEFE] p-4">
-      <p className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
-        CREATOR PROFILES •{" "}
-        <span className="font-normal">{profileCount} profiles</span>
-      </p>
+    <section className="flex w-[378px] flex-col items-start gap-3 rounded-2xl border border-[#E1E1E1] bg-white p-4">
+      <CardTitle title="CREATOR PROFILES" subtitle={`${profileCount} profiles`} />
       <div className="flex w-full flex-col space-y-2">
-        {profiles.map((profile) => {
+        {sortedProfiles.map((profile) => {
           const isFollowed = profile.isFollowed;
           const isPending = pendingCreatorIds?.has(profile.id) ?? false;
 
@@ -41,8 +44,7 @@ export function CreatorProfiles({
             }
           }
 
-          const Icon = isPending ? Loader2 : isFollowed ? Minus : Plus;
-          const label = isFollowed ? "Following" : "Follow";
+          const label = isPending ? "..." : isFollowed ? "Unfollow" : "Follow";
 
           return (
             <ProfileCard
@@ -59,20 +61,13 @@ export function CreatorProfiles({
                       isFollowed ? "Unfollow creator" : "Follow creator"
                     }
                     aria-pressed={isFollowed}
-                    className={`group relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all
+                    className={`flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer
                       ${isFollowed
-                        ? "border border-[#696969] bg-white/80 text-[#555555] hover:bg-[#696969]/10"
-                        : "bg-gradient-to-r from-[#6C5CE7] via-[#8357EB] to-[#A363D9] text-white shadow-[0_8px_16px_rgba(108,92,231,0.35)] hover:shadow-[0_10px_24px_rgba(108,92,231,0.45)]"}
+                        ? "border border-[#E1E1E1] bg-white text-[#696969] hover:bg-gray-50"
+                        : "bg-button-secondary text-white hover:bg-button-secondary-hover"}
                       disabled:cursor-not-allowed disabled:opacity-60`}
                   >
-                    <span
-                      className={`grid h-4 w-4 place-items-center rounded-full border transition
-                        ${isFollowed ? "border-transparent bg-[#696969] text-white" : "border-white/70 bg-white/10 text-white"}
-                        ${isPending ? "animate-spin" : ""}`}
-                    >
-                      <Icon className="h-3 w-3" strokeWidth={2.5} />
-                    </span>
-                    <span>{isPending ? "Working..." : label}</span>
+                    {label}
                   </button>
                 ) : undefined
               }

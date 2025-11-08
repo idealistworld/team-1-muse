@@ -95,15 +95,19 @@ export function useCreatePostViewModel() {
 
     setContentFeed((prevFeed) =>
       prevFeed.map((post) =>
+        // If highlighting this post, unhighlight all others
+        // If unhighlighting, just unhighlight this one
         post.id === postId
           ? { ...post, isHighlighted: !post.isHighlighted }
+          : newState
+          ? { ...post, isHighlighted: false }
           : post
       )
     );
 
     // Show toast after state update
     toast.info(
-      newState ? "Post added to highlights" : "Post removed from highlights"
+      newState ? "Post selected for inspiration" : "Post deselected"
     );
   }
 

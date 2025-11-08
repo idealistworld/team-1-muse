@@ -2,12 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 export default function NavBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -45,6 +46,11 @@ export default function NavBar() {
     router.push("/login");
   }
 
+  // Don't render navbar on login page
+  if (pathname === '/login') {
+    return null;
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="px-6 py-3 flex items-center justify-between">
@@ -79,14 +85,14 @@ export default function NavBar() {
             user ? (
               <button
                 onClick={handleSignOut}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[#696969] bg-white border border-[#E1E1E1] hover:bg-gray-50 rounded-md transition-colors cursor-pointer"
               >
                 Sign out
               </button>
             ) : (
               <button
                 onClick={handleSignIn}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-muse hover:bg-muse-hover rounded-md transition-colors cursor-pointer"
               >
                 Sign in
               </button>
