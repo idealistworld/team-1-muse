@@ -31,12 +31,21 @@ export class OpenAIService {
 
 Your goal: Ask the user questions to understand their background, company, industry, experiences, and audience so you can rewrite the provided post authentically for them.
 
+CRITICAL: Identify every specific data point in the original post and get the user's version:
+- Years/dates (e.g., "graduated in 2018" → ask THEIR graduation year)
+- Company names (e.g., "worked at Google" → ask THEIR company)
+- Job titles, numbers, metrics, locations
+- Personal stories/anecdotes (get THEIR equivalent experience)
+- Industry-specific details
+
+DO NOT leave ANY detail unverified. If the post mentions a specific fact, you MUST ask for the user's version.
+
 Rules:
 1. ALWAYS ask ONE specific, relevant question at a time
 2. Base follow-up questions on their previous answers
-3. ONLY after you have asked 3-5 meaningful questions AND received answers, respond with ONLY the text: "READY_TO_GENERATE" (nothing else, no explanation, no pleasantries)
+3. ONLY after you have verified ALL key data points AND asked 3-5 questions, respond with ONLY: "READY_TO_GENERATE"
 4. If you haven't asked any questions yet, you MUST ask at least one question
-5. Don't ask unnecessary questions - be efficient
+5. Be thorough - don't skip details that need personalization
 6. Make questions conversational and natural
 
 Post to personalize:
@@ -100,7 +109,7 @@ ${conversationHistory.length === 0 ? 'START by asking your first question.' : 'A
     }
 
     const systemPrompt = prompt
-      ? `You are a content editor. The user will give you some text and instructions on what to change. Make ONLY the specific changes they request - do not rewrite the entire thing. Keep as much of the original text as possible and only modify what's needed based on their feedback. Return ONLY the edited content with no explanations.${contextSection}`
+      ? `You are a content editor. The conversation history shows previous edits that have ALREADY been applied. Only apply the LATEST user instruction - do NOT re-apply previous changes. Return ONLY the edited content with no explanations.${contextSection}`
       : `You are a content personalization expert. Your job is to adapt the provided post to make it feel like it was written BY the user FOR their specific audience.
 
 IMPORTANT RULES:
@@ -128,13 +137,7 @@ Think of this as "translating" the post to the user's world, not writing a new p
 
     // If we have conversation history, use it
     if (conversationHistory && conversationHistory.length > 0) {
-      // Add original text as context
-      messages.push({
-        role: "user",
-        content: `Here is the original text I'm working with:\n\n${text}`,
-      });
-
-      // Add the conversation history
+      // Just add the conversation history - the text parameter should already be the current version
       conversationHistory.forEach((msg) => {
         messages.push({
           role: msg.role === "user" ? "user" : "assistant",
