@@ -23,7 +23,7 @@ Our app (Muse) takes in data from sources of successful creators on LinkedIn (an
 - **Notifications**: react-toastify
 
 ### Backend
-- **API**: Next.js API Routes (Pages Router)
+- **API**: Next.js Route Handlers (App Router)
 - **Runtime**: Node.js
 - **Authentication**: Supabase Auth (JWT)
 - **Language**: TypeScript
