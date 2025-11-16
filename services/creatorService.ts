@@ -15,6 +15,10 @@ interface UserFollowWithProfile {
 export class CreatorService {
   /**
    * Follow a creator
+   * Uses upsert to handle both INSERT and UPDATE cases:
+   * - If user hasn't followed this creator: creates new follow relationship (CREATE)
+   * - If follow already exists: updates the record (UPDATE)
+   * This implements the "U" in CRUD operations
    */
   async followCreator(
     supabase: SupabaseClient,

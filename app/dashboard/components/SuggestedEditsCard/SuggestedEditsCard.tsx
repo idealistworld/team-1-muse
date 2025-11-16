@@ -77,22 +77,25 @@ export function SuggestedEditsCard({ className, vm, onAcceptEdit }: SuggestedEdi
 
       <CardContent className="space-y-6">
         {/* Voice Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Voice Mode</label>
-          <button
-            onClick={vm.toggleVoiceMode}
-            className={cn(
-              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-              vm.isVoiceMode ? "bg-[#5578C8]" : "bg-gray-200"
-            )}
-          >
-            <span
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">Voice Mode</label>
+            <button
+              onClick={vm.toggleVoiceMode}
               className={cn(
-                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                vm.isVoiceMode ? "translate-x-6" : "translate-x-1"
+                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                vm.isVoiceMode ? "bg-[#5578C8]" : "bg-gray-200"
               )}
-            />
-          </button>
+            >
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                  vm.isVoiceMode ? "translate-x-6" : "translate-x-1"
+                )}
+              />
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">Chrome browser required</p>
         </div>
 
         {/* Feedback Input */}

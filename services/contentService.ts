@@ -18,6 +18,7 @@ interface CreatorContentWithProfile extends CreatorContent {
 
 interface UserFollowRow {
   creator_id: number;
+  created_at: string;
 }
 
 export class ContentService {
@@ -83,7 +84,13 @@ export class ContentService {
     });
   }
 
+  /**
+   * Fetch all creators and merge with user's follow status
+   * If userId is provided, checks which creators the user follows and marks them
+   * This enables the UI to show follow/unfollow buttons with correct state
+   */
   async fetchCreators(userId?: string): Promise<Profile[]> {
+    // Fetch all creator profiles from database
     const { data } = await this.supabase
       .from("creator_profiles")
       .select("*")
@@ -91,29 +98,32 @@ export class ContentService {
 
     if (!data) return [];
 
-    let followedCreators = new Set<number>();
+    // Build a map of creator IDs to follow timestamps for O(1) lookup
+    const followedCreatorsMap = new Map<number, string>();
 
     if (userId) {
       const { data: follows, error } = await this.supabase
         .from("user_follows")
-        .select("creator_id")
+        .select("creator_id, created_at")
         .eq("user_id", userId);
 
       if (error) {
         console.error("Failed to load followed creators", error);
       } else if (follows) {
-        followedCreators = new Set(
-          (follows as UserFollowRow[]).map((follow) => follow.creator_id)
-        );
+        // Convert array of follow records to Map for efficient lookup with timestamps
+        (follows as UserFollowRow[]).forEach((follow) => {
+          followedCreatorsMap.set(follow.creator_id, follow.created_at);
+        });
       }
     }
 
-    // Transform CreatorProfile to Profile format for UI
+    // Transform database model to UI model, enriching with follow status and timestamp
     return data.map((creator: CreatorProfile) => ({
       id: creator.creator_id,
       name: extractNameFromUrl(creator.profile_url),
       connections: creator.platform,
-      isFollowed: followedCreators.has(creator.creator_id),
+      isFollowed: followedCreatorsMap.has(creator.creator_id),
+      followedAt: followedCreatorsMap.get(creator.creator_id),
     }));
   }
 

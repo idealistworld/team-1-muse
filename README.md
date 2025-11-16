@@ -45,6 +45,113 @@ Our app (Muse) takes in data from sources of successful creators on LinkedIn (an
 - **Package Manager**: npm
 - **Build Tool**: Next.js with Turbopack
 
+## Database Schema
+
+### Tables
+
+#### creator_profiles
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| creator_id | bigint | NO | - | PRIMARY KEY |
+| profile_url | text | NO | - | |
+| platform | text | NO | - | |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+#### creator_content
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| content_id | bigint | NO | - | PRIMARY KEY |
+| creator_id | bigint | NO | - | FK → creator_profiles(creator_id) |
+| post_url | text | NO | - | |
+| post_raw | text | YES | - | |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+#### user_profiles
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| user_id | uuid | NO | - | PRIMARY KEY |
+| subscription_tier | text | NO | - | |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+#### user_follows
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | uuid | NO | gen_random_uuid() | PRIMARY KEY |
+| user_id | uuid | NO | - | FK → user_profiles(user_id), UNIQUE(user_id, creator_id) |
+| creator_id | bigint | NO | - | FK → creator_profiles(creator_id), UNIQUE(user_id, creator_id) |
+| created_at | timestamptz | NO | now() | |
+
+---
+
+#### user_posts
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| post_id | uuid | NO | gen_random_uuid() | PRIMARY KEY |
+| user_id | uuid | NO | - | FK → user_profiles(user_id) |
+| raw_text | text | YES | - | |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+#### post_inspirations
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| id | bigint | NO | - | PRIMARY KEY |
+| post_id | uuid | NO | - | FK → user_posts(post_id), UNIQUE(post_id, content_id) |
+| content_id | bigint | NO | - | FK → creator_content(content_id), UNIQUE(post_id, content_id) |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+#### user_media
+
+| Column | Type | Nullable | Default | Constraints |
+|--------|------|----------|---------|-------------|
+| user_media_id | uuid | NO | gen_random_uuid() | PRIMARY KEY |
+| post_id | uuid | NO | - | FK → user_posts(post_id) |
+| media_url | text | NO | - | |
+| media_type | text | YES | - | |
+| created_at | timestamptz | NO | now() | |
+| updated_at | timestamptz | NO | now() | |
+
+---
+
+### Relationships
+
+```
+user_profiles
+├─→ user_follows (user_id)
+└─→ user_posts (user_id)
+
+creator_profiles
+├─→ creator_content (creator_id)
+└─→ user_follows (creator_id)
+
+user_posts
+├─→ post_inspirations (post_id)
+└─→ user_media (post_id)
+
+creator_content
+└─→ post_inspirations (content_id)
+```
+
 ## Setup
 
 1. Install dependencies:
@@ -84,7 +191,9 @@ Retrieves all creator profiles from the database.
 **Request:**
 
 - Method: `GET`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
+- Headers:
+  - `Authorization: Bearer <token>`
 
 **Response:**
 
@@ -104,7 +213,7 @@ Retrieves all creator profiles from the database.
 **Status Codes:**
 
 - `200`: Success
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 #### `GET /api/creators/get-followed-creators`
@@ -114,7 +223,9 @@ Returns all creators that the authenticated user follows.
 **Request:**
 
 - Method: `GET`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
+- Headers:
+  - `Authorization: Bearer <token>`
 - Query Parameters:
   - `user_id` (required): UUID of the user
 
@@ -143,7 +254,7 @@ GET /api/creators/get-followed-creators?user_id=abc123
 
 - `200`: Success
 - `400`: Missing or invalid user_id
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 #### `POST /api/creators/follow`
@@ -183,7 +294,6 @@ Follow a creator.
 - `200`: Success
 - `400`: Missing or invalid creatorId
 - `401`: Unauthorized
-- `405`: Method not allowed
 - `500`: Server error
 
 #### `DELETE /api/creators/unfollow`
@@ -222,7 +332,6 @@ Unfollow a creator.
 - `200`: Success
 - `400`: Missing or invalid creatorId
 - `401`: Unauthorized
-- `405`: Method not allowed
 - `500`: Server error
 
 ### Content Endpoints
@@ -234,7 +343,9 @@ Retrieves all creator content posts.
 **Request:**
 
 - Method: `GET`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
+- Headers:
+  - `Authorization: Bearer <token>`
 
 **Response:**
 
@@ -255,7 +366,7 @@ Retrieves all creator content posts.
 **Status Codes:**
 
 - `200`: Success
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 ### AI Endpoints
@@ -267,8 +378,9 @@ Generate AI-powered content edits based on user feedback.
 **Request:**
 
 - Method: `POST`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
 - Headers:
+  - `Authorization: Bearer <token>`
   - `Content-Type: application/json`
 - Body:
 
@@ -302,7 +414,7 @@ Generate AI-powered content edits based on user feedback.
 
 - `200`: Success
 - `400`: Missing required text field
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 #### `POST /api/ai/ask-question`
@@ -312,8 +424,9 @@ Ask AI questions about content with conversation history support.
 **Request:**
 
 - Method: `POST`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
 - Headers:
+  - `Authorization: Bearer <token>`
   - `Content-Type: application/json`
 - Body:
 
@@ -350,7 +463,7 @@ OR (when ready to generate):
 
 - `200`: Success
 - `400`: Missing required postContent field
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 #### `POST /api/ai/text-to-speech`
@@ -360,8 +473,9 @@ Convert text to speech using AI voice synthesis.
 **Request:**
 
 - Method: `POST`
-- Authentication: Not required
+- Authentication: Required (Bearer token)
 - Headers:
+  - `Authorization: Bearer <token>`
   - `Content-Type: application/json`
 - Body:
 
@@ -383,7 +497,7 @@ Convert text to speech using AI voice synthesis.
 
 - `200`: Success (returns audio file)
 - `400`: Missing required text field
-- `405`: Method not allowed
+- `401`: Unauthorized
 - `500`: Server error
 
 ## Mock Data
