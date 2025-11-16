@@ -54,20 +54,23 @@ export function AIAssistantPanel({
 
       <div className="space-y-4">
         {/* Voice Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Voice Mode</label>
-          <button
-            onClick={toggleVoiceMode}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isVoiceMode ? "bg-[#5578C8]" : "bg-gray-200"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                isVoiceMode ? "translate-x-6" : "translate-x-1"
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">Voice Mode</label>
+            <button
+              onClick={toggleVoiceMode}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isVoiceMode ? "bg-[#5578C8]" : "bg-gray-200"
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isVoiceMode ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">Chrome browser required</p>
         </div>
 
         {/* Feedback Input */}

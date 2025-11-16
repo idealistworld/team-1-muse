@@ -49,17 +49,25 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     lastGeneratedIdsRef.current = highlightedPostIds;
   }, [highlightedPostIds, highlightedPosts]);
 
+  /**
+   * Handle completion of context gathering modal
+   * Extracts Q&A pairs from conversation history and sends to AI for content generation
+   * The AI uses this context to personalize the generated content for the user's company/industry
+   */
   const handleContextComplete = async (history: ChatMessage[]) => {
     setConversationHistory(history);
     setShowContextModal(false);
     setIsGeneratingInitial(true);
 
     try {
+      // Combine all highlighted posts into one text block
       const combinedContent = highlightedPosts
         .map((post) => post.postRaw || "")
         .join("\n\n");
 
-      // Build context from conversation
+      // Build context object from conversation history
+      // Conversation alternates: user question, assistant answer, user question, assistant answer...
+      // We extract these pairs into a key-value object for the AI prompt
       const context: UserContext = {};
       for (let i = 0; i < history.length; i += 2) {
         const question = history[i]?.content;
@@ -69,6 +77,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
         }
       }
 
+      // Generate AI-edited content with user's context
       const data = await aiClient.generateEdit({
         text: combinedContent,
         context,
@@ -77,6 +86,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
       setUserContent(data.suggestedText || "");
     } catch (error) {
       console.error("Failed to generate initial content:", error);
+      // Fallback: show original content if AI generation fails
       const combinedContent = highlightedPosts
         .map((post) => post.postRaw || "")
         .join("\n\n");

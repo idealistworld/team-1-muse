@@ -21,9 +21,17 @@ export function CreatorProfiles({
   onUnfollow,
   pendingCreatorIds,
 }: CreatorProfilesProps) {
-  // Sort profiles: unfollowed first, then followed
+  // Sort profiles: unfollowed first, then followed by most recent follow time
   const sortedProfiles = [...profiles].sort((a, b) => {
-    if (a.isFollowed === b.isFollowed) return 0;
+    // Both unfollowed or both followed - sort by follow time
+    if (a.isFollowed === b.isFollowed) {
+      // If both followed, sort by most recent follow time first
+      if (a.isFollowed && a.followedAt && b.followedAt) {
+        return new Date(b.followedAt).getTime() - new Date(a.followedAt).getTime();
+      }
+      return 0;
+    }
+    // Unfollowed before followed
     return a.isFollowed ? 1 : -1;
   });
 

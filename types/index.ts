@@ -15,6 +15,7 @@ export interface Profile {
   name: string;
   connections: string;
   isFollowed: boolean;
+  followedAt?: string; // Timestamp when user followed this creator
 }
 
 export interface CreatorProfile {

@@ -117,10 +117,12 @@ export function useCreatePostViewModel() {
     return contentFeed.filter((post) => post.isHighlighted);
   }
 
-  // Filter posts by selected creator
+  // Filter posts by selected creator AND search query
+  // This implements a two-stage filter: first by creator, then by search text
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   const filteredContentFeed = contentFeed.filter((post) => {
+    // Stage 1: Filter by selected creator (or show all if none selected)
     const matchesCreator =
       selectedCreatorId === null || post.creatorId === selectedCreatorId;
 
@@ -128,10 +130,13 @@ export function useCreatePostViewModel() {
       return false;
     }
 
+    // Stage 2: Filter by search query across multiple fields
+    // If no search query, pass all posts that matched creator filter
     if (!normalizedQuery) {
       return true;
     }
 
+    // Search across title, author name, and post content
     const haystacks = [post.title, post.author, post.postRaw ?? ""];
     return haystacks.some((value) =>
       value.toLowerCase().includes(normalizedQuery)
@@ -163,12 +168,21 @@ export function useCreatePostViewModel() {
     }
   }
 
+  /**
+   * Follow a creator with optimistic UI updates
+   * Implementation strategy:
+   * 1. Immediately update UI to show "followed" state (optimistic)
+   * 2. Send API request to backend
+   * 3. If request fails, rollback UI to previous state
+   * This provides instant feedback to users while handling network failures gracefully
+   */
   async function followCreator(creatorId: number) {
     if (!user) {
       toast.error("Please sign in to follow creators.");
       return;
     }
 
+    // Prevent duplicate requests while one is in progress
     if (pendingCreatorIds.has(creatorId)) {
       return;
     }
@@ -187,11 +201,18 @@ export function useCreatePostViewModel() {
       return;
     }
 
-    const previousState = targetProfile.isFollowed;
+    // Save current state for potential rollback
+    const previousState = {
+      isFollowed: targetProfile.isFollowed,
+      followedAt: targetProfile.followedAt,
+    };
 
+    // Optimistically update UI before API call
     setCreatorProfiles((prevProfiles) =>
       prevProfiles.map((profile) =>
-        profile.id === creatorId ? { ...profile, isFollowed: true } : profile
+        profile.id === creatorId
+          ? { ...profile, isFollowed: true, followedAt: new Date().toISOString() }
+          : profile
       )
     );
 
@@ -201,10 +222,11 @@ export function useCreatePostViewModel() {
       await followCreatorApi(creatorId, accessToken);
       toast.success("Creator followed.");
     } catch (error) {
+      // Rollback to previous state on error
       setCreatorProfiles((prevProfiles) =>
         prevProfiles.map((profile) =>
           profile.id === creatorId
-            ? { ...profile, isFollowed: previousState }
+            ? { ...profile, isFollowed: previousState.isFollowed, followedAt: previousState.followedAt }
             : profile
         )
       );
@@ -217,6 +239,10 @@ export function useCreatePostViewModel() {
     }
   }
 
+  /**
+   * Unfollow a creator with optimistic UI updates
+   * Same pattern as followCreator but in reverse - see followCreator for detailed explanation
+   */
   async function unfollowCreator(creatorId: number) {
     if (!user) {
       toast.error("Please sign in to unfollow creators.");
@@ -241,11 +267,15 @@ export function useCreatePostViewModel() {
       return;
     }
 
-    const previousState = targetProfile.isFollowed;
+    const previousState = {
+      isFollowed: targetProfile.isFollowed,
+      followedAt: targetProfile.followedAt,
+    };
 
+    // Optimistically update UI to show unfollowed state
     setCreatorProfiles((prevProfiles) =>
       prevProfiles.map((profile) =>
-        profile.id === creatorId ? { ...profile, isFollowed: false } : profile
+        profile.id === creatorId ? { ...profile, isFollowed: false, followedAt: undefined } : profile
       )
     );
 
@@ -255,10 +285,11 @@ export function useCreatePostViewModel() {
       await unfollowCreatorApi(creatorId, accessToken);
       toast.success("Creator unfollowed.");
     } catch (error) {
+      // Rollback on error
       setCreatorProfiles((prevProfiles) =>
         prevProfiles.map((profile) =>
           profile.id === creatorId
-            ? { ...profile, isFollowed: previousState }
+            ? { ...profile, isFollowed: previousState.isFollowed, followedAt: previousState.followedAt }
             : profile
         )
       );
