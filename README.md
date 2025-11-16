@@ -11,6 +11,40 @@
 
 Our app (Muse) takes in data from sources of successful creators on LinkedIn (and in the future other business platforms) then allows end-user to adjust the original content to reflect their company. We use the OpenAI API for text generation and voice. The core use case is making content generation faster and more accurate as a GTM solution for small teams or solo founders.
 
+## Tech Stack
+
+### Frontend
+- **Framework**: Next.js 15.5.4 (App Router)
+- **UI Library**: React 19
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4
+- **UI Components**: shadcn/ui, Radix UI
+- **State Management**: React Hooks
+- **Notifications**: react-toastify
+
+### Backend
+- **API**: Next.js API Routes (Pages Router)
+- **Runtime**: Node.js
+- **Authentication**: Supabase Auth (JWT)
+- **Language**: TypeScript
+
+### Database
+- **Platform**: Supabase
+- **Database**: PostgreSQL
+- **ORM**: Supabase Client (@supabase/supabase-js)
+
+### AI & External Services
+- **AI Provider**: OpenAI
+- **Models**:
+  - GPT-4o-mini (text generation)
+  - TTS-1 (text-to-speech)
+- **Features**: Content editing, Q&A, voice synthesis
+
+### Development Tools
+- **Linting**: ESLint
+- **Package Manager**: npm
+- **Build Tool**: Next.js with Turbopack
+
 ## Setup
 
 1. Install dependencies:
@@ -38,6 +72,319 @@ Our app (Muse) takes in data from sources of successful creators on LinkedIn (an
    ```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## API Endpoints
+
+### Creator Endpoints
+
+#### `GET /api/creators/get-all-creators`
+
+Retrieves all creator profiles from the database.
+
+**Request:**
+
+- Method: `GET`
+- Authentication: Not required
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "creator_id": 1,
+      "profile_url": "https://linkedin.com/in/username",
+      "platform": "LinkedIn",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `405`: Method not allowed
+- `500`: Server error
+
+#### `GET /api/creators/get-followed-creators`
+
+Returns all creators that the authenticated user follows.
+
+**Request:**
+
+- Method: `GET`
+- Authentication: Not required
+- Query Parameters:
+  - `user_id` (required): UUID of the user
+
+**Example:**
+
+```
+GET /api/creators/get-followed-creators?user_id=abc123
+```
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "creator_id": 1,
+      "profile_url": "https://linkedin.com/in/username",
+      "platform": "LinkedIn",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `400`: Missing or invalid user_id
+- `405`: Method not allowed
+- `500`: Server error
+
+#### `POST /api/creators/follow`
+
+Follow a creator.
+
+**Request:**
+
+- Method: `POST`
+- Authentication: Required (Bearer token)
+- Headers:
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "creatorId": 1
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "user_id": "abc123",
+    "creator_id": 1,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "isFollowed": true
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `400`: Missing or invalid creatorId
+- `401`: Unauthorized
+- `405`: Method not allowed
+- `500`: Server error
+
+#### `DELETE /api/creators/unfollow`
+
+Unfollow a creator.
+
+**Request:**
+
+- Method: `DELETE`
+- Authentication: Required (Bearer token)
+- Headers:
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "creatorId": 1
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "user_id": "abc123",
+    "creator_id": 1
+  },
+  "isFollowed": false
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `400`: Missing or invalid creatorId
+- `401`: Unauthorized
+- `405`: Method not allowed
+- `500`: Server error
+
+### Content Endpoints
+
+#### `GET /api/posts/get-all-posts`
+
+Retrieves all creator content posts.
+
+**Request:**
+
+- Method: `GET`
+- Authentication: Not required
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "content_id": 1,
+      "creator_id": 1,
+      "post_url": "https://linkedin.com/posts/...",
+      "post_raw": "Post content text...",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `405`: Method not allowed
+- `500`: Server error
+
+### AI Endpoints
+
+#### `POST /api/ai/generate-edit`
+
+Generate AI-powered content edits based on user feedback.
+
+**Request:**
+
+- Method: `POST`
+- Authentication: Not required
+- Headers:
+  - `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "text": "Original content to edit",
+  "prompt": "Make it more professional",
+  "context": {
+    "industry": "Technology",
+    "tone": "professional"
+  },
+  "conversationHistory": [
+    { "role": "user", "content": "Previous message" },
+    { "role": "assistant", "content": "Previous response" }
+  ]
+}
+```
+
+**Response:**
+
+```json
+{
+  "originalText": "Original content to edit",
+  "suggestedText": "Edited content...",
+  "additions": 5,
+  "deletions": 3
+}
+```
+
+**Status Codes:**
+
+- `200`: Success
+- `400`: Missing required text field
+- `405`: Method not allowed
+- `500`: Server error
+
+#### `POST /api/ai/ask-question`
+
+Ask AI questions about content with conversation history support.
+
+**Request:**
+
+- Method: `POST`
+- Authentication: Not required
+- Headers:
+  - `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "postContent": "Content to ask about",
+  "conversationHistory": [
+    { "role": "user", "content": "What is this about?" },
+    { "role": "assistant", "content": "This content discusses..." }
+  ]
+}
+```
+
+**Response:**
+
+```json
+{
+  "ready": false,
+  "question": "What industry does your company operate in?"
+}
+```
+
+OR (when ready to generate):
+
+```json
+{
+  "ready": true
+}
+```
+
+**Note:** The AI will ask 3-5 questions to gather context before returning `ready: true`
+
+**Status Codes:**
+
+- `200`: Success
+- `400`: Missing required postContent field
+- `405`: Method not allowed
+- `500`: Server error
+
+#### `POST /api/ai/text-to-speech`
+
+Convert text to speech using AI voice synthesis.
+
+**Request:**
+
+- Method: `POST`
+- Authentication: Not required
+- Headers:
+  - `Content-Type: application/json`
+- Body:
+
+```json
+{
+  "text": "Text to convert to speech",
+  "voice": "alloy"
+}
+```
+
+**Note:** Voice parameter is optional and defaults to "alloy"
+
+**Response:**
+
+- Content-Type: `audio/mpeg`
+- Body: Binary audio data (MP3 format)
+
+**Status Codes:**
+
+- `200`: Success (returns audio file)
+- `400`: Missing required text field
+- `405`: Method not allowed
+- `500`: Server error
 
 ## Mock Data
 
