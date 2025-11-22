@@ -25,7 +25,7 @@ export function DiffView({ original, edited }: DiffViewProps) {
           return (
             <span
               key={index}
-              className="bg-red-200 text-red-900 line-through font-medium"
+              className="bg-red-100 text-red-500 line-through opacity-60"
             >
               {part.value}
             </span>

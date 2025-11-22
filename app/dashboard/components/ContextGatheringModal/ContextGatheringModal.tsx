@@ -89,96 +89,97 @@ export function ContextGatheringModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Initial Step - Choose path */}
-          {vm.modalStep === "initial" && (
+          {/* Initial Step - Show analysis results */}
+          {vm.modalStep === "initial" && vm.postAnalysis && (
             <div className="space-y-5">
-              {/* Info Coverage Ring */}
-              <div className="flex justify-center">
-                <InfoCoverageRing
-                  filled={vm.getProfileSummary().filled.length}
-                  total={vm.getProfileSummary().filled.length + vm.getProfileSummary().missing.length}
-                />
+              {/* Analysis Summary */}
+              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                <p className="text-sm font-semibold text-blue-700 mb-2">
+                  Post Analysis
+                </p>
+                <p className="text-sm text-blue-600">
+                  {vm.postAnalysis.analysis}
+                </p>
               </div>
 
-              {/* Show what we know */}
-              {vm.getProfileSummary().hasData && (
+              {/* Data points that need personalization */}
+              {vm.postAnalysis.dataPoints.length > 0 && (
                 <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-100">
-                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-500" />
-                    What we know about you
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Things to personalize:
                   </p>
-                  <div className="space-y-2">
-                    {vm.profileData.fullName && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <User className="w-3.5 h-3.5 text-gray-400" />
-                        <span>{vm.profileData.fullName}</span>
-                      </div>
-                    )}
-                    {vm.profileData.currentTitle && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-                        <span>{vm.profileData.currentTitle}</span>
-                      </div>
-                    )}
-                    {vm.profileData.companyName && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                        <span>{vm.profileData.companyName}</span>
-                      </div>
-                    )}
-                    {vm.profileData.industry && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="w-3.5 h-3.5 text-center text-gray-400">🏭</span>
-                        <span>{vm.profileData.industry}</span>
-                      </div>
-                    )}
-                    {vm.profileData.productName && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="w-3.5 h-3.5 text-center text-gray-400">📦</span>
-                        <span>{vm.profileData.productName}</span>
-                      </div>
-                    )}
-                    {vm.profileData.targetCustomer && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="w-3.5 h-3.5 text-center text-gray-400">🎯</span>
-                        <span>{vm.profileData.targetCustomer}</span>
-                      </div>
-                    )}
-                  </div>
+                  <ul className="space-y-1">
+                    {vm.postAnalysis.dataPoints.map((point, i) => (
+                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                        <span className="text-gray-400">•</span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
-              {!vm.getProfileSummary().hasData && (
-                <div className="text-center py-6">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                    <User className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    No profile data yet. Add some info to personalize your content!
+              {/* Questions we'll ask */}
+              {vm.postAnalysis.questions.length > 0 && (
+                <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                  <p className="text-sm font-semibold text-orange-700 mb-2">
+                    {vm.postAnalysis.questions.length} question{vm.postAnalysis.questions.length > 1 ? 's' : ''} to ask:
                   </p>
+                  <ul className="space-y-2">
+                    {vm.postAnalysis.questions.map((q, i) => (
+                      <li key={i} className="text-sm text-orange-600">
+                        {i + 1}. {q.question}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* What we already have */}
+              {vm.getProfileSummary().hasData && (
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                  <p className="text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    From your profile:
+                  </p>
+                  <div className="text-sm text-emerald-600 space-y-1">
+                    {vm.profileData.fullName && <p>• {vm.profileData.fullName}</p>}
+                    {vm.profileData.currentTitle && <p>• {vm.profileData.currentTitle}</p>}
+                    {vm.profileData.companyName && <p>• {vm.profileData.companyName}</p>}
+                    {vm.profileData.industry && <p>• {vm.profileData.industry}</p>}
+                  </div>
                 </div>
               )}
 
               {/* Action buttons */}
               <div className="flex flex-col gap-3">
-                <button
-                  onClick={vm.startPersonalization}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all duration-300 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Personalize More
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    vm.useCurrentInfo();
-                  }}
-                  disabled={!vm.getProfileSummary().hasData}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Check className="w-4 h-4" />
-                  Use Current Info
-                </button>
+                {vm.postAnalysis.questions.length > 0 ? (
+                  <button
+                    onClick={vm.startPersonalization}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all duration-300 cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Answer {vm.postAnalysis.questions.length} Question{vm.postAnalysis.questions.length > 1 ? 's' : ''}
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => vm.useCurrentInfo()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-300 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    Ready to Generate
+                  </button>
+                )}
+                {vm.postAnalysis.questions.length > 0 && (
+                  <button
+                    onClick={() => vm.useCurrentInfo()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    Skip Questions
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     vm.handleSkip();
@@ -186,9 +187,19 @@ export function ContextGatheringModal({
                   }}
                   className="w-full px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition-all cursor-pointer"
                 >
-                  Skip for Now
+                  Skip Personalization
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Analyzing Step */}
+          {vm.modalStep === "analyzing" && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-blue-500 animate-pulse" />
+              </div>
+              <p className="text-sm text-gray-600">Analyzing what this post needs...</p>
             </div>
           )}
 

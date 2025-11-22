@@ -10,7 +10,19 @@ interface ChatMessage {
   content: string;
 }
 
-type ModalStep = "initial" | "questioning" | "ready";
+type ModalStep = "initial" | "analyzing" | "questioning" | "ready";
+
+interface AnalysisQuestion {
+  field: string;
+  question: string;
+  why: string;
+}
+
+interface PostAnalysis {
+  analysis: string;
+  dataPoints: string[];
+  questions: AnalysisQuestion[];
+}
 
 export function useContextGatheringViewModel(postContent: string) {
   const { user, supabase } = useAuth();
@@ -21,8 +33,11 @@ export function useContextGatheringViewModel(postContent: string) {
   const [isAskingQuestion, setIsAskingQuestion] = useState(false);
   const [isReadyToGenerate, setIsReadyToGenerate] = useState(false);
   const [shouldAutoSubmit, setShouldAutoSubmit] = useState(false);
-  const [modalStep, setModalStep] = useState<ModalStep>("initial");
+  const [modalStep, setModalStep] = useState<ModalStep>("analyzing");
   const [profileData, setProfileData] = useState<Record<string, string>>({});
+  const [postAnalysis, setPostAnalysis] = useState<PostAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(true);
+  const hasAnalyzedRef = useRef(false);
 
   // Voice mode
   const [isVoiceMode, setIsVoiceMode] = useState(false);
@@ -187,6 +202,56 @@ export function useContextGatheringViewModel(postContent: string) {
     loadProfile();
   }, [user, supabase]);
 
+  // Auto-analyze when we have post content and profile data is loaded
+  useEffect(() => {
+    if (!postContent || hasAnalyzedRef.current) return;
+
+    // Small delay to ensure profile data is loaded
+    const timer = setTimeout(() => {
+      if (!hasAnalyzedRef.current) {
+        hasAnalyzedRef.current = true;
+        runAnalysis();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [postContent, profileData]);
+
+  // Run the analysis using AI
+  const runAnalysis = async () => {
+    setIsAnalyzing(true);
+
+    try {
+      // Use AI to analyze what the post needs
+      const response = await fetch('/api/ai/analyze-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postContent, existingProfile: profileData }),
+      });
+
+      if (!response.ok) throw new Error('Analysis failed');
+
+      const data = await response.json();
+
+      setPostAnalysis({
+        analysis: data.analysis || "General post",
+        dataPoints: data.dataPoints || [],
+        questions: data.questions || [],
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      // Fallback
+      setPostAnalysis({
+        analysis: "Unable to analyze - will use basic personalization",
+        dataPoints: [],
+        questions: [],
+      });
+    } finally {
+      setIsAnalyzing(false);
+      setModalStep("initial");
+    }
+  };
+
   // Get what profile fields are filled vs missing
   const getProfileSummary = () => {
     const keyFields = ['fullName', 'currentTitle', 'companyName', 'industry', 'productName', 'targetCustomer'];
@@ -195,33 +260,21 @@ export function useContextGatheringViewModel(postContent: string) {
     return { filled, missing, hasData: filled.length > 0 };
   };
 
-  // Start with personalization (ask questions for missing data)
+  // Start with personalization - ask the first question from analysis
   const startPersonalization = async () => {
-    setModalStep("questioning");
-    setIsAskingQuestion(true);
+    const questions = postAnalysis?.questions || [];
 
-    try {
-      const { missing } = getProfileSummary();
-      const data = await aiClient.askQuestion({
-        postContent,
-        conversationHistory: [],
-        existingContext: profileData,
-        missingFields: missing,
-      });
-
-      if (data.ready) {
-        setIsReadyToGenerate(true);
-      } else if (data.question) {
-        setConversationHistory([
-          { role: "assistant", content: data.question },
-        ]);
-      }
-    } catch (error) {
-      console.error("Failed to start conversation:", error);
-      setIsReadyToGenerate(true);
-    } finally {
-      setIsAskingQuestion(false);
+    // If no questions, we're ready
+    if (questions.length === 0) {
+      useCurrentInfo();
+      return;
     }
+
+    // Start with the first question
+    setModalStep("questioning");
+    setConversationHistory([
+      { role: "assistant", content: questions[0].question },
+    ]);
   };
 
   // Use current profile data directly
@@ -403,7 +456,10 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsAskingQuestion(false);
     setIsVoiceMode(false);
     setIsListening(false);
-    setModalStep("initial");
+    setModalStep("analyzing");
+    setPostAnalysis(null);
+    setIsAnalyzing(true);
+    hasAnalyzedRef.current = false;
   };
 
   return {
@@ -417,6 +473,8 @@ export function useContextGatheringViewModel(postContent: string) {
     silenceCountdown,
     modalStep,
     profileData,
+    postAnalysis,
+    isAnalyzing,
     getProfileSummary,
     handleSubmitAnswer,
     handleSkip,

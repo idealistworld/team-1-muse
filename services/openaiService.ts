@@ -156,26 +156,15 @@ Think of this as "translating" the post to the user's world, not writing a new p
       },
     ];
 
-    // If we have conversation history, use it
-    if (conversationHistory && conversationHistory.length > 0) {
-      // Just add the conversation history - the text parameter should already be the current version
-      conversationHistory.forEach((msg) => {
-        messages.push({
-          role: msg.role === "user" ? "user" : "assistant",
-          content: msg.content,
-        });
-      });
-    } else {
-      // No conversation history, use single-turn format
-      const userMessage = prompt
-        ? `Here is the text:\n\n${text}\n\nInstructions: ${prompt}`
-        : text;
+    // Always include the current text as the first user message
+    const textMessage = prompt
+      ? `Here is the current text:\n\n${text}\n\nEdit instruction: ${prompt}`
+      : `Here is the text to edit:\n\n${text}`;
 
-      messages.push({
-        role: "user",
-        content: userMessage,
-      });
-    }
+    messages.push({
+      role: "user",
+      content: textMessage,
+    });
 
     const completion = await this.openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -185,11 +174,22 @@ Think of this as "translating" the post to the user's world, not writing a new p
 
     const suggestedText = completion.choices[0]?.message?.content || "";
 
-    // Calculate rough additions/deletions
-    const originalWords = text.split(/\s+/).length;
-    const suggestedWords = suggestedText.split(/\s+/).length;
-    const additions = Math.max(0, suggestedWords - originalWords);
-    const deletions = Math.max(0, originalWords - suggestedWords);
+    // Calculate actual additions/deletions by comparing words
+    const originalWords = new Set(text.toLowerCase().split(/\s+/));
+    const suggestedWords = new Set(suggestedText.toLowerCase().split(/\s+/));
+
+    let additions = 0;
+    let deletions = 0;
+
+    // Count words in suggested that aren't in original (additions)
+    suggestedWords.forEach(word => {
+      if (!originalWords.has(word)) additions++;
+    });
+
+    // Count words in original that aren't in suggested (deletions)
+    originalWords.forEach(word => {
+      if (!suggestedWords.has(word)) deletions++;
+    });
 
     return {
       originalText: text,

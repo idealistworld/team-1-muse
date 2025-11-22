@@ -80,11 +80,11 @@ export default function CreatePostPage() {
           clearAllHighlights(true);
         }}
       />
-      <div className="min-h-screen bg-grid" style={{ backgroundColor: '#F9FAFB' }}>
+      <div className="min-h-screen bg-grid overflow-x-hidden" style={{ backgroundColor: '#F9FAFB' }}>
         {/* Three Column Layout */}
-        <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto p-4 items-stretch min-h-[calc(100vh-120px)]">
+        <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto p-4 items-stretch min-h-[calc(100vh-120px)] overflow-hidden">
           {/* Left Column - Sidebar */}
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <ContentFeed
               posts={filteredContentFeed}
               postCount={filteredContentFeed.length}
@@ -97,7 +97,7 @@ export default function CreatePostPage() {
           </div>
 
           {/* Middle Column - Your Content */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-w-0">
             <ContentEditorCard
               userContent={userContent}
               setUserContent={setUserContent}
@@ -116,7 +116,7 @@ export default function CreatePostPage() {
           </div>
 
           {/* Right Column - AI Assistant Controls */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-w-0">
             <AIAssistantPanel
               isAiActive={editsVm.isAiActive}
               isVoiceMode={editsVm.isVoiceMode}
