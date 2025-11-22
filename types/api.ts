@@ -19,6 +19,8 @@ export interface GenerateEditRequest {
 export interface AskQuestionRequest {
   postContent: string;
   conversationHistory: Array<{ role: "assistant" | "user"; content: string }>;
+  existingContext?: Record<string, string>;
+  missingFields?: string[];
 }
 
 export interface AskQuestionResponse {

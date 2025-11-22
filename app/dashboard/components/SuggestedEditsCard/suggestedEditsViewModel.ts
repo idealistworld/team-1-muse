@@ -1,35 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { aiClient } from "@/services/aiClient";
-
-// Web Speech API type declarations
-interface SpeechRecognitionEvent extends Event {
-  readonly resultIndex: number;
-  readonly results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  readonly error: string;
-  readonly message: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onresult:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
-    | null;
-  onerror:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
-    | null;
-  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
+import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
+import { getSpeechRecognition } from "@/types";
 
 export interface GeneratedVersion {
   suggestedText: string;
@@ -87,24 +60,8 @@ export function useSuggestedEditsViewModel(
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognitionAPI =
-      (
-        window as Window & {
-          SpeechRecognition?: new () => SpeechRecognition;
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).SpeechRecognition ||
-      (
-        window as Window & {
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).webkitSpeechRecognition;
-
-    if (!SpeechRecognitionAPI) {
-      return;
-    }
+    const SpeechRecognitionAPI = getSpeechRecognition();
+    if (!SpeechRecognitionAPI) return;
 
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true; // Keep listening
@@ -285,7 +242,7 @@ export function useSuggestedEditsViewModel(
       if (isRecognitionRunningRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (e) {
+        } catch {
           // Ignore errors
         }
         // Wait for it to fully stop

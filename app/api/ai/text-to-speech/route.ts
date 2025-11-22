@@ -29,6 +29,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Text-to-speech error:", error);
-    return Response.json({ error: "Failed to generate speech" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return Response.json(
+      { error: "Failed to generate speech", details: errorMessage },
+      { status: 500 }
+    );
   }
 }

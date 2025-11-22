@@ -4,6 +4,7 @@
  */
 import { ProfileCard } from "./ProfileCard";
 import { CardTitle } from "../shared/CardTitle";
+import { Button } from "@/components/ui/button";
 import type { Profile } from "@/types";
 
 interface CreatorProfilesProps {
@@ -36,7 +37,7 @@ export function CreatorProfiles({
   });
 
   return (
-    <section className="flex w-[378px] flex-col items-start gap-3 rounded-2xl border border-[#E1E1E1] bg-white p-4">
+    <section className="flex w-[378px] flex-col items-start gap-3 rounded-md border border-[#E1E1E1] bg-white p-4">
       <CardTitle title="CREATOR PROFILES" subtitle={`${profileCount} profiles`} />
       <div className="flex w-full flex-col space-y-2">
         {sortedProfiles.map((profile) => {
@@ -61,22 +62,16 @@ export function CreatorProfiles({
               connections={profile.connections}
               action={
                 onFollow || onUnfollow ? (
-                  <button
-                    type="button"
+                  <Button
                     onClick={handleClick}
                     disabled={isPending}
-                    aria-label={
-                      isFollowed ? "Unfollow creator" : "Follow creator"
-                    }
+                    variant={isFollowed ? "outline" : "default"}
+                    size="sm"
+                    aria-label={isFollowed ? "Unfollow creator" : "Follow creator"}
                     aria-pressed={isFollowed}
-                    className={`flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer
-                      ${isFollowed
-                        ? "border border-[#E1E1E1] bg-white text-[#696969] hover:bg-gray-50"
-                        : "bg-button-secondary text-white hover:bg-button-secondary-hover"}
-                      disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     {label}
-                  </button>
+                  </Button>
                 ) : undefined
               }
             />

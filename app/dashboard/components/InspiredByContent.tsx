@@ -10,7 +10,7 @@ interface InspiredByContentProps {
 
 export function InspiredByContent({ highlightedPosts }: InspiredByContentProps) {
   return (
-    <div className="bg-[#FFFEFE] rounded-2xl border border-[#E1E1E1] p-4 min-h-[600px]">
+    <div className="bg-[#FFFEFE] rounded-md border border-[#E1E1E1] p-4 min-h-[600px]">
       <div className="mb-4">
         <p className="text-xs font-semibold leading-none text-[#696969] uppercase tracking-wide">
           INSPIRED BY •{" "}
