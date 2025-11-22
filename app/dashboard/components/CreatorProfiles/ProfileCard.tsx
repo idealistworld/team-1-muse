@@ -1,69 +1,59 @@
 /**
- * ProfileCard - Renders an individual profile card with avatar and connection count
+ * ProfileCard - Renders an individual profile card
  * Used to display creator profiles in various sections of the dashboard
  */
 import type { ReactNode } from "react";
+import Image from "next/image";
+import { Heart, MessageCircle, Repeat2 } from "lucide-react";
 
 interface ProfileCardProps {
   name: string;
   connections: string;
+  postCount?: number;
+  avgReactions?: number;
+  avgComments?: number;
+  avgReposts?: number;
   action?: ReactNode;
 }
 
-const AVATAR_COLORS = [
-  "#6366F1", // Indigo
-  "#8B5CF6", // Purple
-  "#EC4899", // Pink
-  "#14B8A6", // Teal
-  "#F59E0B", // Amber
-  "#EF4444", // Rose
-  "#06B6D4", // Cyan
-  "#84CC16", // Lime
-];
-
-function getColorForName(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-export function ProfileCard({ name, connections, action }: ProfileCardProps) {
-  const avatarColor = getColorForName(name);
+export function ProfileCard({ name, connections, postCount, avgReactions, avgComments, avgReposts, action }: ProfileCardProps) {
+  const hasStats = avgReactions !== undefined && avgReactions > 0;
 
   return (
-    <div className="flex w-full items-center justify-between rounded-xl bg-white border border-[#E1E1E1] px-3 py-3">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 flex-shrink-0">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 48 48"
-            fill="none"
-            className="h-full w-full"
-          >
-            <path
-              d="M48 24C48 37.2548 37.2548 48 24 48C10.7452 48 0 37.2548 0 24C0 10.7452 10.7452 0 24 0C37.2548 0 48 10.7452 48 24Z"
-              fill={avatarColor}
-            />
-            <path
-              d="M24 24C26.7614 24 29 21.7614 29 19C29 16.2386 26.7614 14 24 14C21.2386 14 19 16.2386 19 19C19 21.7614 21.2386 24 24 24Z"
-              fill="white"
-            />
-            <path
-              d="M24 27C19.5817 27 16 30.5817 16 35H32C32 30.5817 28.4183 27 24 27Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-[#696969]">
-            {name}
-          </span>
-          <span className="text-xs font-normal text-[#696969]">
-            {connections}
-          </span>
-        </div>
+    <div className="group flex items-center gap-3 w-full rounded-xl bg-white border border-gray-100 px-5 py-4 hover:border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer">
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
+        {/* Name */}
+        <span className="text-base font-semibold text-gray-900 truncate">
+          {name}
+        </span>
+        {/* LinkedIn logo + posts */}
+        <span className="flex items-center gap-1.5 text-sm text-gray-500">
+          <Image
+            src="/Linkedin_icon.png"
+            alt="LinkedIn"
+            width={16}
+            height={16}
+            className="flex-shrink-0"
+          />
+          {postCount !== undefined ? `${postCount} posts` : connections}
+        </span>
+        {/* Stats */}
+        {hasStats && (
+          <div className="flex items-center gap-2 text-gray-400 mt-0.5">
+            <div className="flex items-center gap-1" title="Avg reactions">
+              <Heart className="w-3 h-3" />
+              <span className="text-xs">{avgReactions?.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-1" title="Avg comments">
+              <MessageCircle className="w-3 h-3" />
+              <span className="text-xs">{avgComments?.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-1" title="Avg reposts">
+              <Repeat2 className="w-3 h-3" />
+              <span className="text-xs">{avgReposts?.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </div>
       {action ? <div className="flex-shrink-0">{action}</div> : null}
     </div>

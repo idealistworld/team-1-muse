@@ -1,4 +1,65 @@
-// Database types
+// User data storage (generic key-value store)
+export interface UserData<T = Record<string, unknown>> {
+  id: string;
+  user_id: string;
+  key: string;
+  data: T;
+  created_at: string;
+  updated_at: string;
+}
+
+// Profile data structure
+export interface ProfileData {
+  fullName?: string;
+  currentTitle?: string;
+  companyName?: string;
+  industry?: string;
+  location?: string;
+  productName?: string;
+  productDescription?: string;
+  targetCustomer?: string;
+  problemSolved?: string;
+  pricing?: string;
+  users?: string;
+  mrr?: string;
+  arr?: string;
+  growth?: string;
+  launchDate?: string;
+  previousCompany?: string;
+  previousRole?: string;
+  yearsExp?: string;
+  education?: string;
+  biggestWin?: string;
+  milestone1?: string;
+  milestone2?: string;
+  awards?: string;
+  primarySkills?: string;
+  specialization?: string;
+  tools?: string;
+}
+
+// LinkedIn post stats
+export interface PostStats {
+  total_reactions: number;
+  like: number;
+  comments: number;
+  reposts: number;
+  love?: number;
+  support?: number;
+  insight?: number;
+  celebrate?: number;
+  funny?: number;
+}
+
+// LinkedIn post media
+export interface PostMedia {
+  type: string;
+  url: string;
+  thumbnail?: string;
+  images?: { url: string; width: number; height: number }[];
+}
+
+// Content types
 export interface ContentPost {
   id: number;
   title: string;
@@ -8,14 +69,28 @@ export interface ContentPost {
   creatorId: number;
   postUrl?: string;
   postRaw?: string;
+  // Full LinkedIn data
+  text?: string;
+  postedAt?: string;
+  postedAtTimestamp?: number;
+  postType?: string;
+  stats?: PostStats;
+  media?: PostMedia;
+  article?: { url: string; title: string; subtitle?: string; thumbnail?: string };
 }
 
 export interface Profile {
   id: number;
   name: string;
   connections: string;
+  profileUrl: string;
   isFollowed: boolean;
   followedAt?: string; // Timestamp when user followed this creator
+  postCount?: number; // Number of posts from this creator
+  // Average engagement stats
+  avgReactions?: number;
+  avgComments?: number;
+  avgReposts?: number;
 }
 
 export interface CreatorProfile {
@@ -24,6 +99,7 @@ export interface CreatorProfile {
   platform: string;
   created_at: string;
   updated_at: string;
+  display_name?: string | null;
 }
 
 export interface CreatorContent {
@@ -43,3 +119,11 @@ export type {
   AskQuestionResponse,
   TextToSpeechRequest,
 } from "./api";
+
+// Re-export speech types
+export type {
+  SpeechRecognition,
+  SpeechRecognitionEvent,
+  SpeechRecognitionErrorEvent,
+} from "./speech";
+export { getSpeechRecognition } from "./speech";

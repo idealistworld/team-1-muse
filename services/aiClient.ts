@@ -38,7 +38,8 @@ class AIClient {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to ask question");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
     return response.json();
@@ -54,7 +55,8 @@ class AIClient {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to generate speech");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
     return response.blob();

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { ContentFeed } from "@/app/dashboard/components/ContentFeed/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
 import { useContentEditorViewModel } from "./contentEditorViewModel";
-import { CreatorProfiles } from "../components/CreatorProfiles/CreatorProfiles";
 import { EditHistory } from "../components/EditHistory/EditHistory";
 import { PostViewModal } from "../components/PostViewModal";
 import { useSuggestedEditsViewModel } from "../components/SuggestedEditsCard/suggestedEditsViewModel";
@@ -17,14 +16,12 @@ import type { ContentPost } from "@/types";
 export default function CreatePostPage() {
   const {
     filteredContentFeed,
-    creatorProfiles,
-    pendingCreatorIds,
-    followCreator,
-    unfollowCreator,
     togglePostHighlight,
     getHighlightedPosts,
+    clearAllHighlights,
     searchQuery,
     setSearchQuery,
+    creatorProfiles,
   } = useCreatePostViewModel();
   const highlightedPosts = getHighlightedPosts();
   const [expandedPost, setExpandedPost] = useState<ContentPost | null>(null);
@@ -38,6 +35,7 @@ export default function CreatePostPage() {
     conversationHistory,
     handleContextComplete,
     handleContextSkip,
+    closeContextModal,
     getPostContent,
   } = useContentEditorViewModel(highlightedPosts);
 
@@ -77,12 +75,16 @@ export default function CreatePostPage() {
         postContent={getPostContent()}
         onComplete={handleContextComplete}
         onSkip={handleContextSkip}
+        onClose={() => {
+          closeContextModal();
+          clearAllHighlights(true);
+        }}
       />
-      <div className="min-h-screen bg-white p-4">
+      <div className="min-h-screen bg-grid" style={{ backgroundColor: '#F9FAFB' }}>
         {/* Three Column Layout */}
-        <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto">
+        <div className="grid grid-cols-[380px_1fr_380px] gap-4 max-w-[1800px] mx-auto p-4 items-stretch min-h-[calc(100vh-120px)]">
           {/* Left Column - Sidebar */}
-          <div className="space-y-4">
+          <div className="flex flex-col">
             <ContentFeed
               posts={filteredContentFeed}
               postCount={filteredContentFeed.length}
@@ -90,19 +92,12 @@ export default function CreatePostPage() {
               onExpandPost={handleExpandPost}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-            />
-
-            <CreatorProfiles
-              profiles={creatorProfiles}
-              profileCount={creatorProfiles.length}
-              onFollow={followCreator}
-              onUnfollow={unfollowCreator}
-              pendingCreatorIds={pendingCreatorIds}
+              creatorProfiles={creatorProfiles}
             />
           </div>
 
           {/* Middle Column - Your Content */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <ContentEditorCard
               userContent={userContent}
               setUserContent={setUserContent}
@@ -117,11 +112,11 @@ export default function CreatePostPage() {
               onRejectEdit={editsVm.handleReset}
             />
 
-            <InspirationPostsCard posts={highlightedPosts} />
+            <InspirationPostsCard posts={highlightedPosts} creatorProfiles={creatorProfiles} />
           </div>
 
           {/* Right Column - AI Assistant Controls */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <AIAssistantPanel
               isAiActive={editsVm.isAiActive}
               isVoiceMode={editsVm.isVoiceMode}

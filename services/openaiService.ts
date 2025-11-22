@@ -25,11 +25,35 @@ export class OpenAIService {
 
   async askQuestion(
     postContent: string,
-    conversationHistory: Array<{ role: "assistant" | "user"; content: string }>
+    conversationHistory: Array<{ role: "assistant" | "user"; content: string }>,
+    existingContext?: Record<string, string>,
+    missingFields?: string[]
   ): Promise<AskQuestionResponse> {
+    // Build context section from existing profile data
+    let existingDataSection = "";
+    if (existingContext && Object.keys(existingContext).length > 0) {
+      const contextParts = Object.entries(existingContext)
+        .filter(([, value]) => value?.trim())
+        .map(([key, value]) => `- ${key}: ${value}`);
+
+      if (contextParts.length > 0) {
+        existingDataSection = `\n\nWE ALREADY KNOW THIS ABOUT THE USER (do NOT ask about these):
+${contextParts.join("\n")}`;
+      }
+    }
+
+    // Build missing fields section
+    let missingFieldsSection = "";
+    if (missingFields && missingFields.length > 0) {
+      missingFieldsSection = `\n\nFIELDS WE STILL NEED (prioritize asking about these):
+${missingFields.map(f => `- ${f}`).join("\n")}`;
+    }
+
     const systemPrompt = `You are a helpful assistant gathering context to personalize content for a user.
 
 Your goal: Ask the user questions to understand their background, company, industry, experiences, and audience so you can rewrite the provided post authentically for them.
+${existingDataSection}
+${missingFieldsSection}
 
 CRITICAL: Identify every specific data point in the original post and get the user's version:
 - Years/dates (e.g., "graduated in 2018" → ask THEIR graduation year)
@@ -38,13 +62,13 @@ CRITICAL: Identify every specific data point in the original post and get the us
 - Personal stories/anecdotes (get THEIR equivalent experience)
 - Industry-specific details
 
-DO NOT leave ANY detail unverified. If the post mentions a specific fact, you MUST ask for the user's version.
+DO NOT ask about information we already have. Focus on what's missing and what's needed for this specific post.
 
 Rules:
 1. ALWAYS ask ONE specific, relevant question at a time
 2. Base follow-up questions on their previous answers
-3. ONLY after you have verified ALL key data points AND asked 3-5 questions, respond with ONLY: "READY_TO_GENERATE"
-4. If you haven't asked any questions yet, you MUST ask at least one question
+3. ONLY after you have enough context (existing data + answers to 2-4 questions), respond with ONLY: "READY_TO_GENERATE"
+4. If we already have good profile data, you can be ready after fewer questions
 5. Be thorough - don't skip details that need personalization
 6. Make questions conversational and natural
 
@@ -52,8 +76,9 @@ Post to personalize:
 ${postContent}
 
 Current conversation length: ${conversationHistory.length} messages
+${existingDataSection ? `\nWe already have profile data, so fewer questions may be needed.` : ''}
 
-${conversationHistory.length === 0 ? 'START by asking your first question.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have asked 3-5 questions and have enough context.'}`;
+${conversationHistory.length === 0 ? 'START by asking your first question about something we don\'t already know.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have enough context.'}`;
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -70,10 +95,8 @@ ${conversationHistory.length === 0 ? 'START by asking your first question.' : 'A
 
     // Check if response contains READY_TO_GENERATE (be lenient with AI being chatty)
     if (response.includes("READY_TO_GENERATE")) {
-      console.log("AI has enough context, ready to generate");
       return { ready: true };
     } else {
-      console.log("AI asking question:", response.substring(0, 100));
       return { ready: false, question: response };
     }
   }
@@ -104,8 +127,6 @@ ${conversationHistory.length === 0 ? 'START by asking your first question.' : 'A
       contextSection = `\n\nIMPORTANT USER CONTEXT:\n${parts.join(
         "\n\n"
       )}\n\nUse this context to make the content authentic, personalized, and relevant to the user's specific situation.`;
-    } else {
-      console.log("⚠️ No context provided to GPT");
     }
 
     const systemPrompt = prompt

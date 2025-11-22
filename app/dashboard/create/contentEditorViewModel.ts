@@ -126,6 +126,10 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     return highlightedPosts.map((post) => post.postRaw || "").join("\n\n");
   };
 
+  const closeContextModal = () => {
+    setShowContextModal(false);
+  };
+
   return {
     userContent,
     setUserContent,
@@ -134,6 +138,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     conversationHistory,
     handleContextComplete,
     handleContextSkip,
+    closeContextModal,
     getPostContent,
   };
 }

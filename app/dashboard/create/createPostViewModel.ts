@@ -1,23 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import type { ContentPost, Profile } from "@/types";
 import { contentService } from "@/services/contentService";
 import { followCreator as followCreatorApi, unfollowCreator as unfollowCreatorApi } from "@/services/creatorClient";
 import { toast } from "react-toastify";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { useAuth } from "@/hooks";
 
 export function useCreatePostViewModel() {
+  const { user, getAccessToken } = useAuth();
   const [contentFeed, setContentFeed] = useState<ContentPost[]>([]);
   const [creatorProfiles, setCreatorProfiles] = useState<Profile[]>([]);
   const [pendingCreatorIds, setPendingCreatorIds] = useState<Set<number>>(
     new Set<number>()
   );
-  const [user, setUser] = useState<User | null>(null);
   const [selectedCreatorId, setSelectedCreatorId] = useState<number | null>(
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const supabase = useMemo(() => createClient(), []);
 
   function setPending(creatorId: number, pending: boolean) {
     setPendingCreatorIds((prev) => {
@@ -30,33 +28,6 @@ export function useCreatePostViewModel() {
       return next;
     });
   }
-
-  async function getAccessToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
-  }
-
-  // Fetch user session
-  useEffect(() => {
-    let isMounted = true;
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!isMounted) return;
-      setUser(user);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!isMounted) return;
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      authListener.subscription.unsubscribe();
-    };
-  }, [supabase]);
 
   // Fetch creator content and profiles from service
   useEffect(() => {
@@ -117,11 +88,20 @@ export function useCreatePostViewModel() {
     return contentFeed.filter((post) => post.isHighlighted);
   }
 
-  // Filter posts by selected creator AND search query
-  // This implements a two-stage filter: first by creator, then by search text
+  // Filter posts by followed creators, selected creator, AND search query
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
+  // Get set of followed creator IDs for efficient lookup
+  const followedCreatorIds = new Set(
+    creatorProfiles.filter(p => p.isFollowed).map(p => p.id)
+  );
+
   const filteredContentFeed = contentFeed.filter((post) => {
+    // Stage 0: Only show posts from followed creators
+    if (!followedCreatorIds.has(post.creatorId)) {
+      return false;
+    }
+
     // Stage 1: Filter by selected creator (or show all if none selected)
     const matchesCreator =
       selectedCreatorId === null || post.creatorId === selectedCreatorId;
@@ -152,18 +132,20 @@ export function useCreatePostViewModel() {
   }
 
   // Clear all highlights
-  function clearAllHighlights() {
+  function clearAllHighlights(silent = false) {
     const highlightCount = contentFeed.filter((post) => post.isHighlighted).length;
     if (highlightCount > 0) {
       setContentFeed((prevFeed) =>
         prevFeed.map((post) => ({ ...post, isHighlighted: false }))
       );
-      toast.success(
-        `Cleared ${highlightCount} highlighted post${
-          highlightCount > 1 ? "s" : ""
-        }`
-      );
-    } else {
+      if (!silent) {
+        toast.success(
+          `Cleared ${highlightCount} highlighted post${
+            highlightCount > 1 ? "s" : ""
+          }`
+        );
+      }
+    } else if (!silent) {
       toast.info("No highlights to clear");
     }
   }

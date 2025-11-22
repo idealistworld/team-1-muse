@@ -15,17 +15,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Text is required" }, { status: 400 });
     }
 
-    console.log("Generating edit for text:", text.substring(0, 100) + "...");
-    if (context) {
-      console.log("Using context:", Object.keys(context).join(", "));
-    }
-    if (conversationHistory && conversationHistory.length > 0) {
-      console.log("Using conversation history:", conversationHistory.length, "messages");
-    }
-
     const result = await openaiService.generateEdit(text, prompt, context, conversationHistory);
-
-    console.log("Edit generated successfully");
 
     return Response.json(result, { status: 200 });
   } catch (error) {

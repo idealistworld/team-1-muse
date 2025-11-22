@@ -1,42 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { aiClient } from "@/services/aiClient";
-
-// Web Speech API type declarations
-interface SpeechRecognitionEvent extends Event {
-  readonly resultIndex: number;
-  readonly results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  readonly error: string;
-  readonly message: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onresult:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void)
-    | null;
-  onerror:
-    | ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void)
-    | null;
-  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
+import { useAuth } from "@/hooks";
+import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
+import { getSpeechRecognition } from "@/types";
 
 interface ChatMessage {
   role: "assistant" | "user";
   content: string;
 }
 
+type ModalStep = "initial" | "questioning" | "ready";
+
 export function useContextGatheringViewModel(postContent: string) {
+  const { user, supabase } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>(
     []
   );
@@ -44,6 +21,8 @@ export function useContextGatheringViewModel(postContent: string) {
   const [isAskingQuestion, setIsAskingQuestion] = useState(false);
   const [isReadyToGenerate, setIsReadyToGenerate] = useState(false);
   const [shouldAutoSubmit, setShouldAutoSubmit] = useState(false);
+  const [modalStep, setModalStep] = useState<ModalStep>("initial");
+  const [profileData, setProfileData] = useState<Record<string, string>>({});
 
   // Voice mode
   const [isVoiceMode, setIsVoiceMode] = useState(false);
@@ -59,24 +38,8 @@ export function useContextGatheringViewModel(postContent: string) {
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognitionAPI =
-      (
-        window as Window & {
-          SpeechRecognition?: new () => SpeechRecognition;
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).SpeechRecognition ||
-      (
-        window as Window & {
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).webkitSpeechRecognition;
-
-    if (!SpeechRecognitionAPI) {
-      return;
-    }
+    const SpeechRecognitionAPI = getSpeechRecognition();
+    if (!SpeechRecognitionAPI) return;
 
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
@@ -200,36 +163,83 @@ export function useContextGatheringViewModel(postContent: string) {
     };
   }, []);
 
-  // Start conversation when postContent changes
+  // Load profile data from Supabase
   useEffect(() => {
-    if (!postContent || conversationHistory.length > 0) return;
-
-    const startConversation = async () => {
-      setIsAskingQuestion(true);
+    async function loadProfile() {
+      if (!user) return;
 
       try {
-        const data = await aiClient.askQuestion({
-          postContent,
-          conversationHistory: [],
-        });
+        const { data } = await supabase
+          .from("user_data")
+          .select("data")
+          .eq("user_id", user.id)
+          .eq("key", "personal_info")
+          .single();
 
-        if (data.ready) {
-          setIsReadyToGenerate(true);
-        } else if (data.question) {
-          setConversationHistory([
-            { role: "assistant", content: data.question },
-          ]);
+        if (data?.data) {
+          setProfileData(data.data);
         }
-      } catch (error) {
-        console.error("Failed to start conversation:", error);
-        setIsReadyToGenerate(true);
-      } finally {
-        setIsAskingQuestion(false);
+      } catch {
+        // No profile data yet, that's fine
       }
-    };
+    }
 
-    startConversation();
-  }, [postContent, conversationHistory.length]);
+    loadProfile();
+  }, [user, supabase]);
+
+  // Get what profile fields are filled vs missing
+  const getProfileSummary = () => {
+    const keyFields = ['fullName', 'currentTitle', 'companyName', 'industry', 'productName', 'targetCustomer'];
+    const filled = keyFields.filter(key => profileData[key]?.trim());
+    const missing = keyFields.filter(key => !profileData[key]?.trim());
+    return { filled, missing, hasData: filled.length > 0 };
+  };
+
+  // Start with personalization (ask questions for missing data)
+  const startPersonalization = async () => {
+    setModalStep("questioning");
+    setIsAskingQuestion(true);
+
+    try {
+      const { missing } = getProfileSummary();
+      const data = await aiClient.askQuestion({
+        postContent,
+        conversationHistory: [],
+        existingContext: profileData,
+        missingFields: missing,
+      });
+
+      if (data.ready) {
+        setIsReadyToGenerate(true);
+      } else if (data.question) {
+        setConversationHistory([
+          { role: "assistant", content: data.question },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to start conversation:", error);
+      setIsReadyToGenerate(true);
+    } finally {
+      setIsAskingQuestion(false);
+    }
+  };
+
+  // Use current profile data directly
+  const useCurrentInfo = () => {
+    // Convert profile data to conversation format so content generation can use it
+    const contextMessages: ChatMessage[] = [];
+
+    if (profileData.fullName) contextMessages.push({ role: "user", content: `My name is ${profileData.fullName}` });
+    if (profileData.currentTitle) contextMessages.push({ role: "user", content: `I'm a ${profileData.currentTitle}` });
+    if (profileData.companyName) contextMessages.push({ role: "user", content: `At ${profileData.companyName}` });
+    if (profileData.industry) contextMessages.push({ role: "user", content: `In the ${profileData.industry} industry` });
+    if (profileData.productName) contextMessages.push({ role: "user", content: `Building ${profileData.productName}` });
+    if (profileData.targetCustomer) contextMessages.push({ role: "user", content: `For ${profileData.targetCustomer}` });
+    if (profileData.productDescription) contextMessages.push({ role: "user", content: `Which ${profileData.productDescription}` });
+
+    setConversationHistory(contextMessages);
+    setIsReadyToGenerate(true);
+  };
 
   const toggleVoiceMode = () => {
     const newVoiceMode = !isVoiceMode;
@@ -281,7 +291,7 @@ export function useContextGatheringViewModel(postContent: string) {
       if (isRecognitionRunningRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (e) {
+        } catch {
           // Ignore errors
         }
         // Wait for it to fully stop
@@ -347,6 +357,7 @@ export function useContextGatheringViewModel(postContent: string) {
       const data = await aiClient.askQuestion({
         postContent,
         conversationHistory: updatedHistory,
+        existingContext: profileData,
       });
 
       if (data.ready) {
@@ -392,6 +403,7 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsAskingQuestion(false);
     setIsVoiceMode(false);
     setIsListening(false);
+    setModalStep("initial");
   };
 
   return {
@@ -403,11 +415,16 @@ export function useContextGatheringViewModel(postContent: string) {
     isVoiceMode,
     isListening,
     silenceCountdown,
+    modalStep,
+    profileData,
+    getProfileSummary,
     handleSubmitAnswer,
     handleSkip,
     toggleVoiceMode,
     startListening,
     stopListening,
+    startPersonalization,
+    useCurrentInfo,
     reset,
   };
 }

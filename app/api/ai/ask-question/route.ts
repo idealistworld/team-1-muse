@@ -9,15 +9,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { postContent, conversationHistory } = await request.json();
+    const { postContent, conversationHistory, existingContext, missingFields } = await request.json();
 
     if (!postContent) {
       return Response.json({ error: "Post content is required" }, { status: 400 });
     }
 
-    console.log(`Asking question (${conversationHistory?.length / 2 || 0} exchanges so far)...`);
-
-    const result = await openaiService.askQuestion(postContent, conversationHistory || []);
+    const result = await openaiService.askQuestion(
+      postContent,
+      conversationHistory || [],
+      existingContext,
+      missingFields
+    );
 
     return Response.json(result, { status: 200 });
   } catch (error) {
