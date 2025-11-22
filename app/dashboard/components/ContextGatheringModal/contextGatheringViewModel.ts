@@ -266,7 +266,7 @@ export function useContextGatheringViewModel(postContent: string) {
 
     // If no questions, we're ready
     if (questions.length === 0) {
-      useCurrentInfo();
+      applyCurrentInfo();
       return;
     }
 
@@ -277,8 +277,8 @@ export function useContextGatheringViewModel(postContent: string) {
     ]);
   };
 
-  // Use current profile data directly
-  const useCurrentInfo = () => {
+  // Apply current profile data directly
+  const applyCurrentInfo = () => {
     // Convert profile data to conversation format so content generation can use it
     const contextMessages: ChatMessage[] = [];
 
@@ -482,7 +482,7 @@ export function useContextGatheringViewModel(postContent: string) {
     startListening,
     stopListening,
     startPersonalization,
-    useCurrentInfo,
+    applyCurrentInfo,
     reset,
   };
 }

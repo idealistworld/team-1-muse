@@ -4,8 +4,7 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useContextGatheringViewModel } from "./contextGatheringViewModel";
 import { CircularCountdown } from "../shared/CircularCountdown";
-import { InfoCoverageRing } from "../shared/InfoCoverageRing";
-import { Sparkles, Mic, MicOff, Send, Check, User, Briefcase, Building2, ChevronRight } from "lucide-react";
+import { Sparkles, Mic, MicOff, Send, Check, ChevronRight } from "lucide-react";
 
 interface ContextGatheringModalProps {
   isOpen: boolean;
@@ -164,7 +163,7 @@ export function ContextGatheringModal({
                   </button>
                 ) : (
                   <button
-                    onClick={() => vm.useCurrentInfo()}
+                    onClick={() => vm.applyCurrentInfo()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-300 cursor-pointer"
                   >
                     <Check className="w-4 h-4" />
@@ -173,7 +172,7 @@ export function ContextGatheringModal({
                 )}
                 {vm.postAnalysis.questions.length > 0 && (
                   <button
-                    onClick={() => vm.useCurrentInfo()}
+                    onClick={() => vm.applyCurrentInfo()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
                   >
                     <Check className="w-4 h-4" />
