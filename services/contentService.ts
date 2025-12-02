@@ -32,12 +32,14 @@ interface PaginationOptions {
 const DEFAULT_PAGE_SIZE = 1000; // Fetch all posts
 
 export class ContentService {
-  private supabase = createClient();
+  private getClient() {
+    return createClient();
+  }
 
   async fetchCreatorContent(options: PaginationOptions = {}): Promise<ContentPost[]> {
     const { limit = DEFAULT_PAGE_SIZE, offset = 0 } = options;
 
-    const { data } = await this.supabase
+    const { data } = await this.getClient()
       .from("creator_content")
       .select(`
         *,
@@ -96,7 +98,7 @@ export class ContentService {
   }
 
   async fetchCreatorContentById(creatorId: number): Promise<ContentPost[]> {
-    const { data } = await this.supabase
+    const { data } = await this.getClient()
       .from("creator_content")
       .select("*")
       .eq("creator_id", creatorId)
@@ -120,7 +122,7 @@ export class ContentService {
     postUrl: string,
     postRaw?: string
   ): Promise<void> {
-    await this.supabase.from("creator_content").insert({
+    await this.getClient().from("creator_content").insert({
       creator_id: creatorId,
       post_url: postUrl,
       post_raw: postRaw,
@@ -131,7 +133,7 @@ export class ContentService {
    * Get total count of posts for pagination
    */
   async getPostCount(): Promise<number> {
-    const { count } = await this.supabase
+    const { count } = await this.getClient()
       .from("creator_content")
       .select("*", { count: "exact", head: true });
     return count || 0;
@@ -143,8 +145,10 @@ export class ContentService {
    * This enables the UI to show follow/unfollow buttons with correct state
    */
   async fetchCreators(userId?: string): Promise<Profile[]> {
+    const client = this.getClient();
+
     // Fetch all creator profiles from database
-    const { data } = await this.supabase
+    const { data } = await client
       .from("creator_profiles")
       .select("*")
       .order("created_at", { ascending: false });
@@ -155,7 +159,7 @@ export class ContentService {
     const followedCreatorsMap = new Map<number, string>();
 
     if (userId) {
-      const { data: follows, error } = await this.supabase
+      const { data: follows, error } = await client
         .from("user_follows")
         .select("creator_id, created_at")
         .eq("user_id", userId);
@@ -171,7 +175,7 @@ export class ContentService {
     }
 
     // Fetch posts with stats for each creator
-    const { data: contentData } = await this.supabase
+    const { data: contentData } = await client
       .from("creator_content")
       .select("creator_id, post_raw");
 
