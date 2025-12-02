@@ -16,7 +16,6 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
   const [isGeneratingInitial, setIsGeneratingInitial] = useState(false);
   const [showContextModal, setShowContextModal] = useState(false);
   const [showChoiceModal, setShowChoiceModal] = useState(false);
-  const [skipQuestions, setSkipQuestions] = useState(false); // Track if user chose "no custom needed"
   const [similarity, setSimilarity] = useState(50); // Track similarity from choice modal
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const lastGeneratedIdsRef = useRef("");
@@ -141,7 +140,6 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
   // Handler for "Use as inspiration" - opens customization modal
   const handleUseAsInspiration = (simValue: number) => {
     setSimilarity(simValue);
-    setSkipQuestions(false);
     setShowChoiceModal(false);
     setShowContextModal(true);
   };
@@ -181,7 +179,6 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     isGeneratingInitial,
     showContextModal,
     showChoiceModal,
-    skipQuestions,
     conversationHistory,
     handleContextComplete,
     handleContextSkip,

@@ -218,51 +218,49 @@ export function useContextGatheringViewModel(postContent: string) {
   useEffect(() => {
     if (!postContent || hasAnalyzedRef.current) return;
 
+    const doStartPersonalization = async () => {
+      setModalStep("questioning");
+      setIsAskingQuestion(true);
+
+      try {
+        // Pass checked profile data so AI knows what we already have
+        const checkedData = getCheckedProfileData();
+        const data = await aiClient.askQuestion({
+          postContent,
+          conversationHistory: [],
+          existingContext: checkedData,
+        });
+
+        if (data.ready) {
+          // If AI says we have enough, generate immediately
+          setIsReadyToGenerate(true);
+        } else if (data.question) {
+          // AI asks first question about what's missing
+          setConversationHistory([
+            { role: "assistant", content: data.question },
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to start personalization:", error);
+        // Fallback: just use profile data
+        applyCurrentInfo();
+      } finally {
+        setIsAskingQuestion(false);
+      }
+    };
+
     // Small delay to ensure profile data is loaded
     const timer = setTimeout(() => {
       if (!hasAnalyzedRef.current) {
         hasAnalyzedRef.current = true;
-        startPersonalization();
+        doStartPersonalization();
       }
     }, 500);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postContent, profileData]);
 
-  // Run the analysis using AI
-  const runAnalysis = async () => {
-    setIsAnalyzing(true);
-
-    try {
-      // Use AI to analyze what the post needs
-      const response = await fetch('/api/ai/analyze-post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postContent, existingProfile: profileData }),
-      });
-
-      if (!response.ok) throw new Error('Analysis failed');
-
-      const data = await response.json();
-
-      setPostAnalysis({
-        analysis: data.analysis || "General post",
-        dataPoints: data.dataPoints || [],
-        questions: data.questions || [],
-      });
-    } catch (error) {
-      console.error('Analysis error:', error);
-      // Fallback
-      setPostAnalysis({
-        analysis: "Unable to analyze - will use basic personalization",
-        dataPoints: [],
-        questions: [],
-      });
-    } finally {
-      setIsAnalyzing(false);
-      setModalStep("initial");
-    }
-  };
 
   // Get what profile fields are filled vs missing
   const getProfileSummary = () => {
