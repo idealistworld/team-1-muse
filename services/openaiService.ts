@@ -111,7 +111,8 @@ ${conversationHistory.length === 0 ? 'START by asking your first question about 
       personalExperience?: string;
       writingStyle?: string;
     },
-    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>,
+    similarity?: number // 0-100, how different from original (higher = more different)
   ): Promise<GenerateEditResponse> {
     let contextSection = "";
     if (context && Object.keys(context).length > 0) {
@@ -129,8 +130,21 @@ ${conversationHistory.length === 0 ? 'START by asking your first question about 
       )}\n\nUse this context to make the content authentic, personalized, and relevant to the user's specific situation.`;
     }
 
+    // Build similarity instruction based on the slider value
+    // Note: similarity is now 0-100 where 100 = very similar, 0 = very different
+    let similarityInstruction = "";
+    if (similarity !== undefined) {
+      if (similarity >= 70) {
+        similarityInstruction = "\n\nSIMILARITY LEVEL: Very similar to original - only make minimal changes to personalize key details while keeping most of the original wording and structure intact.";
+      } else if (similarity >= 30) {
+        similarityInstruction = "\n\nSIMILARITY LEVEL: Moderate changes - adapt the content significantly while preserving the core message and flow. Rewrite paragraphs in the user's voice.";
+      } else {
+        similarityInstruction = "\n\nSIMILARITY LEVEL: Very different - significantly rewrite the content to feel completely original to the user while maintaining the core insights. Use different examples, structure, and phrasing.";
+      }
+    }
+
     const systemPrompt = prompt
-      ? `You are a content editor. The conversation history shows previous edits that have ALREADY been applied. Only apply the LATEST user instruction - do NOT re-apply previous changes. Return ONLY the edited content with no explanations.${contextSection}`
+      ? `You are a content editor. The conversation history shows previous edits that have ALREADY been applied. Only apply the LATEST user instruction - do NOT re-apply previous changes. Return ONLY the edited content with no explanations.${contextSection}${similarityInstruction}`
       : `You are a content personalization expert. Your job is to adapt the provided post to make it feel like it was written BY the user FOR their specific audience.
 
 IMPORTANT RULES:
@@ -143,7 +157,7 @@ IMPORTANT RULES:
 7. Make it feel authentic to the user's background and audience
 8. KEEP approximately the same word count as the original (within 10-20%)
 
-Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}`;
+Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}${similarityInstruction}`;
 
     // Build messages array
     const messages: Array<{

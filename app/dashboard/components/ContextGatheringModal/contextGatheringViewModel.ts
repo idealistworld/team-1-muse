@@ -35,6 +35,8 @@ export function useContextGatheringViewModel(postContent: string) {
   const [shouldAutoSubmit, setShouldAutoSubmit] = useState(false);
   const [modalStep, setModalStep] = useState<ModalStep>("analyzing");
   const [profileData, setProfileData] = useState<Record<string, string>>({});
+  const [editableProfileData, setEditableProfileData] = useState<Record<string, string>>({});
+  const [checkedProfileFields, setCheckedProfileFields] = useState<Record<string, boolean>>({});
   const [postAnalysis, setPostAnalysis] = useState<PostAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(true);
   const hasAnalyzedRef = useRef(false);
@@ -193,6 +195,16 @@ export function useContextGatheringViewModel(postContent: string) {
 
         if (data?.data) {
           setProfileData(data.data);
+          setEditableProfileData(data.data); // Initialize editable copy
+
+          // Auto-check all fields that have data
+          const initialChecked: Record<string, boolean> = {};
+          Object.entries(data.data).forEach(([key, value]) => {
+            if (value && String(value).trim()) {
+              initialChecked[key] = true;
+            }
+          });
+          setCheckedProfileFields(initialChecked);
         }
       } catch {
         // No profile data yet, that's fine
@@ -202,7 +214,7 @@ export function useContextGatheringViewModel(postContent: string) {
     loadProfile();
   }, [user, supabase]);
 
-  // Auto-analyze when we have post content and profile data is loaded
+  // Auto-start personalization when we have post content and profile data is loaded
   useEffect(() => {
     if (!postContent || hasAnalyzedRef.current) return;
 
@@ -210,7 +222,7 @@ export function useContextGatheringViewModel(postContent: string) {
     const timer = setTimeout(() => {
       if (!hasAnalyzedRef.current) {
         hasAnalyzedRef.current = true;
-        runAnalysis();
+        startPersonalization();
       }
     }, 500);
 
@@ -260,35 +272,78 @@ export function useContextGatheringViewModel(postContent: string) {
     return { filled, missing, hasData: filled.length > 0 };
   };
 
-  // Start with personalization - ask the first question from analysis
-  const startPersonalization = async () => {
-    const questions = postAnalysis?.questions || [];
-
-    // If no questions, we're ready
-    if (questions.length === 0) {
-      applyCurrentInfo();
-      return;
-    }
-
-    // Start with the first question
-    setModalStep("questioning");
-    setConversationHistory([
-      { role: "assistant", content: questions[0].question },
-    ]);
+  // Toggle a profile field checkbox
+  const toggleProfileField = (key: string) => {
+    setCheckedProfileFields(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
-  // Apply current profile data directly
-  const applyCurrentInfo = () => {
-    // Convert profile data to conversation format so content generation can use it
-    const contextMessages: ChatMessage[] = [];
+  // Update a profile field value
+  const updateProfileField = (key: string, value: string) => {
+    setEditableProfileData(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
-    if (profileData.fullName) contextMessages.push({ role: "user", content: `My name is ${profileData.fullName}` });
-    if (profileData.currentTitle) contextMessages.push({ role: "user", content: `I'm a ${profileData.currentTitle}` });
-    if (profileData.companyName) contextMessages.push({ role: "user", content: `At ${profileData.companyName}` });
-    if (profileData.industry) contextMessages.push({ role: "user", content: `In the ${profileData.industry} industry` });
-    if (profileData.productName) contextMessages.push({ role: "user", content: `Building ${profileData.productName}` });
-    if (profileData.targetCustomer) contextMessages.push({ role: "user", content: `For ${profileData.targetCustomer}` });
-    if (profileData.productDescription) contextMessages.push({ role: "user", content: `Which ${profileData.productDescription}` });
+  // Get checked profile data only (uses editable data)
+  const getCheckedProfileData = () => {
+    const checked: Record<string, string> = {};
+    Object.entries(editableProfileData).forEach(([key, value]) => {
+      if (checkedProfileFields[key] && value && String(value).trim()) {
+        checked[key] = value;
+      }
+    });
+    return checked;
+  };
+
+  // Start with personalization - ask the LLM what's needed (it knows profile data)
+  const startPersonalization = async () => {
+    setModalStep("questioning");
+    setIsAskingQuestion(true);
+
+    try {
+      // Pass checked profile data so AI knows what we already have
+      const checkedData = getCheckedProfileData();
+      const data = await aiClient.askQuestion({
+        postContent,
+        conversationHistory: [],
+        existingContext: checkedData,
+      });
+
+      if (data.ready) {
+        // If AI says we have enough, generate immediately
+        setIsReadyToGenerate(true);
+      } else if (data.question) {
+        // AI asks first question about what's missing
+        setConversationHistory([
+          { role: "assistant", content: data.question },
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to start personalization:", error);
+      // Fallback: just use profile data
+      applyCurrentInfo();
+    } finally {
+      setIsAskingQuestion(false);
+    }
+  };
+
+  // Apply current profile data directly (only checked fields)
+  const applyCurrentInfo = () => {
+    // Convert CHECKED profile data to conversation format so content generation can use it
+    const contextMessages: ChatMessage[] = [];
+    const checkedData = getCheckedProfileData();
+
+    if (checkedData.fullName) contextMessages.push({ role: "user", content: `My name is ${checkedData.fullName}` });
+    if (checkedData.currentTitle) contextMessages.push({ role: "user", content: `I'm a ${checkedData.currentTitle}` });
+    if (checkedData.companyName) contextMessages.push({ role: "user", content: `At ${checkedData.companyName}` });
+    if (checkedData.industry) contextMessages.push({ role: "user", content: `In the ${checkedData.industry} industry` });
+    if (checkedData.productName) contextMessages.push({ role: "user", content: `Building ${checkedData.productName}` });
+    if (checkedData.targetCustomer) contextMessages.push({ role: "user", content: `For ${checkedData.targetCustomer}` });
+    if (checkedData.productDescription) contextMessages.push({ role: "user", content: `Which ${checkedData.productDescription}` });
 
     setConversationHistory(contextMessages);
     setIsReadyToGenerate(true);
@@ -407,10 +462,12 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsAskingQuestion(true);
 
     try {
+      // Pass checked profile data as existing context
+      const checkedData = getCheckedProfileData();
       const data = await aiClient.askQuestion({
         postContent,
         conversationHistory: updatedHistory,
-        existingContext: profileData,
+        existingContext: checkedData,
       });
 
       if (data.ready) {
@@ -473,9 +530,14 @@ export function useContextGatheringViewModel(postContent: string) {
     silenceCountdown,
     modalStep,
     profileData,
+    editableProfileData,
+    checkedProfileFields,
     postAnalysis,
     isAnalyzing,
     getProfileSummary,
+    toggleProfileField,
+    updateProfileField,
+    getCheckedProfileData,
     handleSubmitAnswer,
     handleSkip,
     toggleVoiceMode,

@@ -8,6 +8,7 @@ import { EditHistory } from "../components/EditHistory/EditHistory";
 import { PostViewModal } from "../components/PostViewModal";
 import { useSuggestedEditsViewModel } from "../components/SuggestedEditsCard/suggestedEditsViewModel";
 import { ContextGatheringModal } from "../components/ContextGatheringModal/ContextGatheringModal";
+import { ChoiceModal } from "../components/ChoiceModal/ChoiceModal";
 import { ContentEditorCard } from "./components/ContentEditorCard";
 import { InspirationPostsCard } from "./components/InspirationPostsCard";
 import { AIAssistantPanel } from "./components/AIAssistantPanel";
@@ -32,10 +33,15 @@ export default function CreatePostPage() {
     setUserContent,
     isGeneratingInitial,
     showContextModal,
+    showChoiceModal,
+    skipQuestions,
     conversationHistory,
     handleContextComplete,
     handleContextSkip,
     closeContextModal,
+    closeChoiceModal,
+    handleUseAsInspiration,
+    handleNoCustomNeeded,
     getPostContent,
   } = useContentEditorViewModel(highlightedPosts);
 
@@ -70,9 +76,19 @@ export default function CreatePostPage() {
         content={expandedPost?.postRaw}
         postUrl={expandedPost?.postUrl}
       />
+      <ChoiceModal
+        isOpen={showChoiceModal}
+        onUseAsInspiration={handleUseAsInspiration}
+        onNoCustomNeeded={handleNoCustomNeeded}
+        onClose={() => {
+          closeChoiceModal();
+          clearAllHighlights(true);
+        }}
+      />
       <ContextGatheringModal
         isOpen={showContextModal}
         postContent={getPostContent()}
+        skipQuestions={skipQuestions}
         onComplete={handleContextComplete}
         onSkip={handleContextSkip}
         onClose={() => {
