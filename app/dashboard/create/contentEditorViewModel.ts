@@ -15,6 +15,9 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
   const [userContent, setUserContent] = useState("");
   const [isGeneratingInitial, setIsGeneratingInitial] = useState(false);
   const [showContextModal, setShowContextModal] = useState(false);
+  const [showChoiceModal, setShowChoiceModal] = useState(false);
+  const [skipQuestions, setSkipQuestions] = useState(false); // Track if user chose "no custom needed"
+  const [similarity, setSimilarity] = useState(50); // Track similarity from choice modal
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const lastGeneratedIdsRef = useRef("");
   const isInitialMount = useRef(true);
@@ -25,7 +28,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     [highlightedPosts]
   );
 
-  // Show modal when posts are selected
+  // Show choice modal when posts are selected
   useEffect(() => {
     // Skip on initial mount
     if (isInitialMount.current) {
@@ -44,8 +47,8 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
       return;
     }
 
-    // Show context modal
-    setShowContextModal(true);
+    // Show choice modal
+    setShowChoiceModal(true);
     lastGeneratedIdsRef.current = highlightedPostIds;
   }, [highlightedPostIds, highlightedPosts]);
 
@@ -77,10 +80,11 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
         }
       }
 
-      // Generate AI-edited content with user's context
+      // Generate AI-edited content with user's context and similarity setting
       const data = await aiClient.generateEdit({
         text: combinedContent,
         context,
+        similarity, // Use similarity from state
       });
 
       setUserContent(data.suggestedText || "");
@@ -130,15 +134,61 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
     setShowContextModal(false);
   };
 
+  const closeChoiceModal = () => {
+    setShowChoiceModal(false);
+  };
+
+  // Handler for "Use as inspiration" - opens customization modal
+  const handleUseAsInspiration = (simValue: number) => {
+    setSimilarity(simValue);
+    setSkipQuestions(false);
+    setShowChoiceModal(false);
+    setShowContextModal(true);
+  };
+
+  // Handler for "No custom needed" - generates immediately with similarity
+  const handleNoCustomNeeded = async (simValue: number) => {
+    setSimilarity(simValue);
+    setShowChoiceModal(false);
+    setIsGeneratingInitial(true);
+
+    try {
+      const combinedContent = highlightedPosts
+        .map((post) => post.postRaw || "")
+        .join("\n\n");
+
+      const data = await aiClient.generateEdit({
+        text: combinedContent,
+        context: {},
+        similarity: simValue,
+      });
+
+      setUserContent(data.suggestedText || "");
+    } catch (error) {
+      console.error("Failed to generate initial content:", error);
+      const combinedContent = highlightedPosts
+        .map((post) => post.postRaw || "")
+        .join("\n\n");
+      setUserContent(combinedContent);
+    } finally {
+      setIsGeneratingInitial(false);
+    }
+  };
+
   return {
     userContent,
     setUserContent,
     isGeneratingInitial,
     showContextModal,
+    showChoiceModal,
+    skipQuestions,
     conversationHistory,
     handleContextComplete,
     handleContextSkip,
     closeContextModal,
+    closeChoiceModal,
+    handleUseAsInspiration,
+    handleNoCustomNeeded,
     getPostContent,
   };
 }

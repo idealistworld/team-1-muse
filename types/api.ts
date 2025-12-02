@@ -14,6 +14,7 @@ export interface GenerateEditRequest {
   prompt?: string;
   context?: Record<string, string>;
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+  similarity?: number; // 0-100, how different from original (higher = more different)
 }
 
 export interface AskQuestionRequest {

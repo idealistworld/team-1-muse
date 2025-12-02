@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useContextGatheringViewModel } from "./contextGatheringViewModel";
 import { CircularCountdown } from "../shared/CircularCountdown";
-import { Sparkles, Mic, MicOff, Send, Check, ChevronRight } from "lucide-react";
+import { Sparkles, Mic, MicOff, Send, Check } from "lucide-react";
 
 interface ContextGatheringModalProps {
   isOpen: boolean;
@@ -88,117 +88,13 @@ export function ContextGatheringModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Initial Step - Show analysis results */}
-          {vm.modalStep === "initial" && vm.postAnalysis && (
-            <div className="space-y-5">
-              {/* Analysis Summary */}
-              <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                <p className="text-sm font-semibold text-blue-700 mb-2">
-                  Post Analysis
-                </p>
-                <p className="text-sm text-blue-600">
-                  {vm.postAnalysis.analysis}
-                </p>
-              </div>
-
-              {/* Data points that need personalization */}
-              {vm.postAnalysis.dataPoints.length > 0 && (
-                <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-100">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    Things to personalize:
-                  </p>
-                  <ul className="space-y-1">
-                    {vm.postAnalysis.dataPoints.map((point, i) => (
-                      <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                        <span className="text-gray-400">•</span>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Questions we'll ask */}
-              {vm.postAnalysis.questions.length > 0 && (
-                <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                  <p className="text-sm font-semibold text-orange-700 mb-2">
-                    {vm.postAnalysis.questions.length} question{vm.postAnalysis.questions.length > 1 ? 's' : ''} to ask:
-                  </p>
-                  <ul className="space-y-2">
-                    {vm.postAnalysis.questions.map((q, i) => (
-                      <li key={i} className="text-sm text-orange-600">
-                        {i + 1}. {q.question}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* What we already have */}
-              {vm.getProfileSummary().hasData && (
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                  <p className="text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    From your profile:
-                  </p>
-                  <div className="text-sm text-emerald-600 space-y-1">
-                    {vm.profileData.fullName && <p>• {vm.profileData.fullName}</p>}
-                    {vm.profileData.currentTitle && <p>• {vm.profileData.currentTitle}</p>}
-                    {vm.profileData.companyName && <p>• {vm.profileData.companyName}</p>}
-                    {vm.profileData.industry && <p>• {vm.profileData.industry}</p>}
-                  </div>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-3">
-                {vm.postAnalysis.questions.length > 0 ? (
-                  <button
-                    onClick={vm.startPersonalization}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all duration-300 cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Answer {vm.postAnalysis.questions.length} Question{vm.postAnalysis.questions.length > 1 ? 's' : ''}
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => vm.applyCurrentInfo()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all duration-300 cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" />
-                    Ready to Generate
-                  </button>
-                )}
-                {vm.postAnalysis.questions.length > 0 && (
-                  <button
-                    onClick={() => vm.applyCurrentInfo()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" />
-                    Skip Questions
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    vm.handleSkip();
-                    onSkip();
-                  }}
-                  className="w-full px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition-all cursor-pointer"
-                >
-                  Skip Personalization
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Analyzing Step */}
-          {vm.modalStep === "analyzing" && (
+          {/* Starting/Loading Step */}
+          {(vm.modalStep === "initial" || vm.modalStep === "analyzing") && (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-blue-500 animate-pulse" />
               </div>
-              <p className="text-sm text-gray-600">Analyzing what this post needs...</p>
+              <p className="text-sm text-gray-600">Getting ready...</p>
             </div>
           )}
 

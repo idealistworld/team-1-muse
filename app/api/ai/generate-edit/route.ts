@@ -9,13 +9,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { text, prompt, context, conversationHistory } = await request.json();
+    const { text, prompt, context, conversationHistory, similarity } = await request.json();
 
     if (!text) {
       return Response.json({ error: "Text is required" }, { status: 400 });
     }
 
-    const result = await openaiService.generateEdit(text, prompt, context, conversationHistory);
+    const result = await openaiService.generateEdit(text, prompt, context, conversationHistory, similarity);
 
     return Response.json(result, { status: 200 });
   } catch (error) {
