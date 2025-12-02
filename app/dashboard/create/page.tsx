@@ -34,7 +34,6 @@ export default function CreatePostPage() {
     isGeneratingInitial,
     showContextModal,
     showChoiceModal,
-    skipQuestions,
     conversationHistory,
     handleContextComplete,
     handleContextSkip,
@@ -88,7 +87,6 @@ export default function CreatePostPage() {
       <ContextGatheringModal
         isOpen={showContextModal}
         postContent={getPostContent()}
-        skipQuestions={skipQuestions}
         onComplete={handleContextComplete}
         onSkip={handleContextSkip}
         onClose={() => {
