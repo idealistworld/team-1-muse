@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Mic, SkipForward, RotateCcw } from "lucide-react";
+import { Mic, SkipForward, RotateCcw, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CategoryProgress {
@@ -14,8 +14,11 @@ interface CategoryProgress {
 interface ProfileCoverageCardProps {
   categories: CategoryProgress[];
   onStartVoiceMode?: () => void;
+  onPauseVoiceMode?: () => void;
   isVoiceActive?: boolean;
   isListening?: boolean;
+  isProcessing?: boolean;
+  isPaused?: boolean;
   currentFieldQuestion?: string;
   onSkipField?: () => void;
   audioLevels?: number[];
@@ -41,7 +44,7 @@ const ANALYSIS_MESSAGES = [
   "Building personalization model...",
 ];
 
-export function ProfileCoverageCard({ categories, onStartVoiceMode, isVoiceActive, isListening, currentFieldQuestion, onSkipField, audioLevels = [0, 0, 0, 0, 0], onResetAll, hasData }: ProfileCoverageCardProps) {
+export function ProfileCoverageCard({ categories, onStartVoiceMode, onPauseVoiceMode, isVoiceActive, isListening, isProcessing, isPaused, currentFieldQuestion, onSkipField, audioLevels = [0, 0, 0, 0, 0], onResetAll, hasData }: ProfileCoverageCardProps) {
   const totalFilled = categories.reduce((acc, cat) => acc + cat.filled, 0);
   const totalFields = categories.reduce((acc, cat) => acc + cat.total, 0);
   const percentage = totalFields > 0 ? Math.round((totalFilled / totalFields) * 100) : 0;
@@ -233,32 +236,61 @@ export function ProfileCoverageCard({ categories, onStartVoiceMode, isVoiceActiv
 
           {/* Center content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-            {/* Voice Mode Active State - Show the question */}
-            {isListening && currentFieldQuestion ? (
+            {/* Processing State - Show spinner */}
+            {isProcessing ? (
+              <div className="flex flex-col items-center text-center px-8">
+                <div className="relative flex items-center justify-center mb-5 py-4">
+                  {/* Animated processing circles */}
+                  <div className="absolute rounded-full bg-amber-500/20 animate-ping" style={{ width: '120px', height: '120px' }} />
+                  <div className="absolute rounded-full bg-amber-500/30 animate-pulse" style={{ width: '90px', height: '90px' }} />
+
+                  {/* Center processing icon */}
+                  <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/30 z-10">
+                    <div className="w-7 h-7 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                </div>
+                <p className="text-lg font-semibold text-amber-600">Processing...</p>
+              </div>
+            ) : isListening && currentFieldQuestion ? (
+              /* Voice Mode Active - Listening State */
               <div className="flex flex-col items-center text-center px-8">
                 {/* Voice Circle - Pings based on volume */}
                 <div className="relative flex items-center justify-center mb-5 py-4">
-                  {/* Pinging circles based on audio level */}
+                  {/* Pinging circles based on audio level - more layers for better visibility */}
                   <div
-                    className="absolute rounded-full bg-[#5578C8]/10 transition-all duration-100"
+                    className="absolute rounded-full bg-[#5578C8]/15 transition-all duration-150 ease-out"
                     style={{
-                      width: `${80 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 80}px`,
-                      height: `${80 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 80}px`,
+                      width: `${100 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 120}px`,
+                      height: `${100 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 120}px`,
                     }}
                   />
                   <div
-                    className="absolute rounded-full bg-[#5578C8]/20 transition-all duration-75"
+                    className="absolute rounded-full bg-[#5578C8]/25 transition-all duration-100 ease-out"
                     style={{
-                      width: `${70 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 50}px`,
-                      height: `${70 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 50}px`,
+                      width: `${85 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 90}px`,
+                      height: `${85 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 90}px`,
+                    }}
+                  />
+                  <div
+                    className="absolute rounded-full bg-[#5578C8]/35 transition-all duration-75 ease-out"
+                    style={{
+                      width: `${70 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 60}px`,
+                      height: `${70 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 60}px`,
                     }}
                   />
 
-                  {/* Center mic button */}
-                  <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-[#5578C8] to-[#4A68B5] flex items-center justify-center shadow-xl shadow-blue-500/30 z-10">
+                  {/* Center mic button - pulses with audio */}
+                  <div
+                    className="relative rounded-full bg-gradient-to-br from-[#5578C8] to-[#4A68B5] flex items-center justify-center shadow-xl shadow-blue-500/30 z-10 transition-all duration-100"
+                    style={{
+                      width: `${64 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 16}px`,
+                      height: `${64 + (audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length) * 16}px`,
+                    }}
+                  >
                     <Mic className="w-7 h-7 text-white" />
                   </div>
                 </div>
+                <p className="text-sm font-medium text-blue-600">Listening...</p>
               </div>
             ) : (
               <>
@@ -283,25 +315,52 @@ export function ProfileCoverageCard({ categories, onStartVoiceMode, isVoiceActiv
           </div>
         </div>
 
-        {/* Question + Skip - Below Circle when listening */}
-        {isListening && currentFieldQuestion && (
-          <div className="mt-8 flex flex-col items-center">
-            <p className="text-2xl font-bold text-gray-800 text-center mb-4">{currentFieldQuestion}</p>
-            {onSkipField && (
-              <Button
-                onClick={onSkipField}
-                variant="ghost"
-                size="sm"
-              >
-                <SkipForward className="w-4 h-4" />
-                Skip this question
-              </Button>
-            )}
+        {/* Question + Skip - Below Circle when listening (not processing) */}
+        {isListening && currentFieldQuestion && !isProcessing && (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="text-2xl font-bold text-gray-800 text-center mb-2">{currentFieldQuestion}</p>
+            <div className="flex gap-2">
+              {onPauseVoiceMode && (
+                <Button
+                  onClick={onPauseVoiceMode}
+                  variant="secondary"
+                  size="sm"
+                >
+                  <Pause className="w-4 h-4" />
+                  Pause
+                </Button>
+              )}
+              {onSkipField && (
+                <Button
+                  onClick={onSkipField}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <SkipForward className="w-4 h-4" />
+                  Skip
+                </Button>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Voice Mode Button - Below Circle (hidden when listening) */}
-        {onStartVoiceMode && !isListening && (
+        {/* Paused State - Show Resume button */}
+        {isPaused && onPauseVoiceMode && (
+          <div className="mt-8 flex flex-col items-center">
+            <p className="text-sm text-gray-500 mb-3">Voice mode paused</p>
+            <Button
+              onClick={onPauseVoiceMode}
+              variant="default"
+              size="lg"
+            >
+              <Play className="w-5 h-5" />
+              Resume
+            </Button>
+          </div>
+        )}
+
+        {/* Voice Mode Button - Below Circle (hidden when listening or paused) */}
+        {onStartVoiceMode && !isListening && !isPaused && (
           <Button
             onClick={onStartVoiceMode}
             variant={isVoiceActive ? "secondary" : "default"}

@@ -15,6 +15,8 @@ export default function PersonalInfoPage() {
   const [activeField, setActiveField] = useState<string | null>(null);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [audioLevels, setAudioLevels] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,8 +158,9 @@ export default function PersonalInfoPage() {
           // Use different parts of frequency spectrum
           const idx = Math.floor((i / bands) * dataArray.length);
           const value = dataArray[idx] || 0;
-          // Normalize to 0-1 range with some boost
-          levels.push(Math.min(1, value / 180));
+          // Normalize to 0-1 range with aggressive boost for better visibility
+          // Lower threshold from 180 to 100 for more sensitivity
+          levels.push(Math.min(1, (value / 100) * 1.5));
         }
 
         setAudioLevels(levels);
@@ -277,6 +280,9 @@ export default function PersonalInfoPage() {
   };
 
   const parseAndExtractValue = async (transcript: string, fieldLabel: string, fieldId: string) => {
+    console.log('🎤 Raw transcript:', transcript);
+    console.log('📋 Field label:', fieldLabel);
+    setIsProcessing(true);
     try {
       // Use AI to extract the actual value from natural language
       const response = await fetch('/api/extract-field-value', {
@@ -289,7 +295,9 @@ export default function PersonalInfoPage() {
       });
 
       const data = await response.json();
+      console.log('🤖 API response:', data);
       const extractedValue = data.value || transcript;
+      console.log('✅ Extracted value:', extractedValue);
 
       setFormData(prev => ({
         ...prev,
@@ -297,14 +305,16 @@ export default function PersonalInfoPage() {
       }));
 
       // Move to next field
+      setIsProcessing(false);
       moveToNextField();
     } catch (error) {
-      console.error("Failed to parse value:", error);
+      console.error("❌ Failed to parse value:", error);
       // Fallback to raw transcript
       setFormData(prev => ({
         ...prev,
         [fieldId]: transcript
       }));
+      setIsProcessing(false);
       moveToNextField();
     }
   };
@@ -415,6 +425,24 @@ export default function PersonalInfoPage() {
       isStartingRef.current = false;
       setIsListening(false);
       toast.error("Failed to initialize voice input. Please try again.");
+    }
+  };
+
+  const togglePause = () => {
+    if (isPaused) {
+      // Resume - start listening again
+      setIsPaused(false);
+      setTimeout(() => {
+        startListening();
+      }, 300);
+    } else {
+      // Pause - stop listening but keep voice mode active
+      setIsPaused(true);
+      if (recognitionRef.current && isListening) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      stopAudioAnalysis();
     }
   };
 
@@ -550,8 +578,11 @@ export default function PersonalInfoPage() {
                 total: cat.dataPoints.length,
               }))}
               onStartVoiceMode={() => setIsVoiceMode(!isVoiceMode)}
+              onPauseVoiceMode={togglePause}
               isVoiceActive={isVoiceMode}
               isListening={isListening}
+              isProcessing={isProcessing}
+              isPaused={isPaused}
               currentFieldQuestion={activeField ? personalInfoCategories.flatMap(c => c.dataPoints).find(d => d.id === activeField)?.question : undefined}
               onSkipField={skipField}
               audioLevels={audioLevels}
