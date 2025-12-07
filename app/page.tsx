@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -10,6 +11,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  Info,
   Link as LinkIcon,
   MessageCircle,
   Mic,
@@ -30,24 +32,28 @@ const navLinks = [
 
 const walkthrough = [
   {
-    title: "Drop LinkedIn URLs",
-    description: "Paste the creators you want to learn from. We fetch their posts automatically.",
+    title: "Drop URLs",
+    description: "Add the LinkedIn creators you trust so Muse can pull their posts.",
     icon: LinkIcon,
+    href: "#workspace",
   },
   {
-    title: "See what wins",
-    description: "Muse spots hooks, cadence, and formats that the feed is rewarding right now.",
+    title: "Analyze winners",
+    description: "See the hooks, cadence, and post types that are working right now.",
     icon: Activity,
+    href: "#workspace",
   },
   {
     title: "Draft with AI",
-    description: "Voice mode or keyboard—get angles, CTAs, and outlines in seconds.",
+    description: "Voice or keyboard: turn inspo into ready-to-publish drafts in minutes.",
     icon: Bot,
+    href: "#workspace",
   },
   {
     title: "Publish with proof",
-    description: "Track engagement range, saves, and comments so you know what to repeat.",
+    description: "Track saves and comments so you know what to repeat next time.",
     icon: BarChart3,
+    href: "#cta",
   },
 ];
 
@@ -73,13 +79,13 @@ const feedItems = [
 const quickStats = [
   { label: "Creators tracked", value: "47" },
   { label: "Posts analyzed", value: "519" },
-  { label: "Engagement range", value: "16.1x → 2.3x" },
+  { label: "Reach lift (early customers)", value: "Up to 10x", note: "Directional lift from early customers using inspo + AI edits." },
 ];
 
 const featureCards = [
   {
     title: "Content Library",
-    description: "Every post your creators publish, organized with tags, saves, and engagement deltas.",
+    description: "Every post your creators publish, organized with tags, saves, and metrics.",
     icon: ClipboardList,
     pill: "519 posts",
   },
@@ -107,9 +113,13 @@ export default function Home() {
           {/* Nav */}
           <header className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-3 shadow-[0_15px_40px_rgba(15,23,42,0.06)] backdrop-blur-md">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 via-white to-emerald-50 ring-1 ring-slate-200">
-                <Sparkles className="h-4 w-4 text-sky-600" />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Muse"
+                width={40}
+                height={40}
+                className="h-9 w-9 rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+              />
               <div className="text-lg font-semibold tracking-tight text-slate-900">Muse</div>
             </div>
             <div className="hidden items-center gap-1 rounded-xl bg-slate-100/80 p-1 shadow-inner shadow-slate-200 sm:flex">
@@ -152,14 +162,44 @@ export default function Home() {
               </div>
               <div className="space-y-4">
                 <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-                  Grow on LinkedIn with a workspace you already know
+                  Turn top LinkedIn posts into ready-to-publish drafts for your brand in minutes
                 </h1>
                 <p className="max-w-2xl text-lg text-slate-600">
-                  Muse mirrors the product experience: a content feed, creator library, AI assistant, and profile
-                  intelligence—all tuned to your LinkedIn workflow.
+                  Paste the creators you trust, see what&apos;s winning this week, and ship consistent, on-brand posts
+                  without starting from scratch.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 md:grid-cols-[1.5fr,1fr]">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {quickStats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
+                    >
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                        {stat.label}
+                        {stat.note && (
+                          <span className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                            <Info className="h-3.5 w-3.5" />
+                            <span className="pointer-events-none absolute -left-2 top-6 hidden w-52 rounded-lg bg-slate-900 px-3 py-2 text-left text-[11px] font-normal text-white shadow-lg group-hover:block">
+                              {stat.note}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xl font-semibold text-slate-900">{stat.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Customer proof</div>
+                  <p className="mt-1 text-slate-800">
+                    “Muse turned my swipe file into 3 ready posts in under 20 minutes—and one booked two demos.”
+                  </p>
+                  <div className="mt-2 text-xs font-semibold text-slate-500">CMO, B2B SaaS</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
                   href="/dashboard/create"
                   className="group inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-[1px] hover:bg-sky-700"
@@ -169,22 +209,11 @@ export default function Home() {
                 </Link>
                 <Link
                   href="#walkthrough"
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 underline underline-offset-4 transition hover:text-slate-900"
                 >
                   Watch the walkthrough
                   <Play className="h-4 w-4 text-slate-500" />
                 </Link>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {quickStats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-[0_12px_30px_rgba(15,23,42,0.05)]"
-                  >
-                    <div className="text-xs uppercase tracking-wide text-slate-500">{stat.label}</div>
-                    <div className="text-xl font-semibold text-slate-900">{stat.value}</div>
-                  </div>
-                ))}
               </div>
               <div className="flex flex-wrap gap-4 text-sm text-slate-600">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 ring-1 ring-slate-200">
@@ -192,13 +221,14 @@ export default function Home() {
                   Voice mode, CTA proof, tone checks
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 ring-1 ring-slate-200">
-                  <TrendingUp className="h-4 w-4 text-amber-500" />
-                  Live engagement deltas
+                  <Pencil className="h-4 w-4 text-slate-500" />
+                  Content feed + AI assistant
                 </div>
               </div>
             </motion.div>
 
             <motion.div
+              id="workspace"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut", delay: 0.05 }}
@@ -213,13 +243,22 @@ export default function Home() {
                     <span className="text-sm font-semibold text-slate-700">Muse workspace</span>
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    Real-time
+                    Product preview
                   </div>
+                </div>
+                <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  What your day-to-day looks like
                 </div>
                 <div className="grid gap-4 bg-slate-50/60 p-5 lg:grid-cols-[0.9fr,1.2fr,0.8fr]">
                   {/* Feed */}
-                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-800">
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Step 1 · Content feed</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600 ring-1 ring-slate-200">
+                        Inspiration
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
                       <span>Content Feed</span>
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
                         All (244)
@@ -268,8 +307,14 @@ export default function Home() {
                   </div>
 
                   {/* Writer */}
-                  <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="mb-3 flex items-center justify-between text-sm font-semibold text-slate-800">
+                  <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Step 2 · Draft</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600 ring-1 ring-slate-200">
+                        AI assist
+                      </span>
+                    </div>
+                    <div className="mb-3 mt-1 flex items-center justify-between text-sm font-semibold text-slate-800">
                       <div className="flex items-center gap-2">
                         <Pencil className="h-4 w-4 text-sky-600" />
                         Your Content
@@ -290,7 +335,13 @@ export default function Home() {
                   </div>
 
                   {/* Assistant */}
-                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100/60">
+                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Step 3 · Polish</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600 ring-1 ring-slate-200">
+                        Edits
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-sky-600" />
@@ -328,7 +379,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Walkthrough: how Muse works</h2>
-                <p className="mt-1 text-slate-600">The product story from adding creators to publishing with proof.</p>
+                <p className="mt-1 text-slate-600">Drop URLs → Analyze winners → Draft with AI → Publish with proof.</p>
               </div>
               <span className="hidden rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 sm:inline-flex">
                 Looks like the real app
@@ -338,22 +389,26 @@ export default function Home() {
               {walkthrough.map((step, idx) => {
                 const Icon = step.icon;
                 return (
-                  <motion.div
-                    key={step.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, ease: "easeOut", delay: idx * 0.05 }}
-                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.04)]"
-                  >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm shadow-slate-300">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="mt-3 text-sm font-semibold text-slate-500">Step {idx + 1}</div>
-                    <div className="text-lg font-semibold text-slate-900">{step.title}</div>
-                    <p className="mt-2 text-sm text-slate-600">{step.description}</p>
-                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                  </motion.div>
+                  <Link key={step.title} href={step.href} className="group">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.6, ease: "easeOut", delay: idx * 0.05 }}
+                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_30px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm shadow-slate-300">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="mt-3 text-sm font-semibold text-slate-500">Step {idx + 1}</div>
+                      <div className="text-lg font-semibold text-slate-900">{step.title}</div>
+                      <p className="mt-2 text-sm text-slate-600">{step.description}</p>
+                      <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-sky-600">
+                        Jump to view <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                    </motion.div>
+                  </Link>
                 );
               })}
             </div>
@@ -446,7 +501,7 @@ export default function Home() {
           </section>
 
           {/* CTA */}
-          <section className="mt-16">
+          <section id="cta" className="mt-16">
             <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-blue-50 px-6 py-10 shadow-[0_18px_60px_rgba(15,23,42,0.08)] md:px-10">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(85,120,200,0.12),transparent_35%),radial-gradient(circle_at_80%_30%,rgba(15,23,42,0.06),transparent_30%)]" />
               <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
