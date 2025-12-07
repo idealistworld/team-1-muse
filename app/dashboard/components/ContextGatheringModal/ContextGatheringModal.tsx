@@ -9,6 +9,7 @@ import { Sparkles, Mic, MicOff, Send, Check } from "lucide-react";
 interface ContextGatheringModalProps {
   isOpen: boolean;
   postContent: string;
+  skipQuestions?: boolean;
   onComplete: (conversationHistory: Array<{ role: "assistant" | "user"; content: string }>) => void;
   onSkip: () => void;
   onClose?: () => void;
