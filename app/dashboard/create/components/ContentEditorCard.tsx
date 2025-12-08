@@ -2,7 +2,7 @@
 
 import { DiffView } from "@/app/dashboard/components/shared/DiffView";
 import type { GeneratedVersion } from "@/app/dashboard/components/SuggestedEditsCard/suggestedEditsViewModel";
-import { PenLine, Check, X, Loader2 } from "lucide-react";
+import { PenLine, Check, X, Loader2, NotebookPen } from "lucide-react";
 
 interface ContentEditorCardProps {
   userContent: string;
@@ -11,6 +11,9 @@ interface ContentEditorCardProps {
   currentVersion: GeneratedVersion | null;
   onAcceptEdit: () => void;
   onRejectEdit: () => void;
+  onSaveSnapshot?: () => void;
+  canSaveSnapshot?: boolean;
+  isSavingSnapshot?: boolean;
 }
 
 export function ContentEditorCard({
@@ -20,6 +23,9 @@ export function ContentEditorCard({
   currentVersion,
   onAcceptEdit,
   onRejectEdit,
+  onSaveSnapshot,
+  canSaveSnapshot = true,
+  isSavingSnapshot = false,
 }: ContentEditorCardProps) {
   const wordCount = userContent.split(/\s+/).filter(Boolean).length;
   const charCount = userContent.length;
@@ -47,24 +53,40 @@ export function ContentEditorCard({
             </div>
           </div>
 
-          {currentVersion && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {onSaveSnapshot && (
               <button
-                onClick={onRejectEdit}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+                onClick={onSaveSnapshot}
+                disabled={!canSaveSnapshot || isSavingSnapshot}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed rounded-xl transition-all"
               >
-                <X className="w-4 h-4" />
-                Reject
+                {isSavingSnapshot ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <NotebookPen className="w-4 h-4" />
+                )}
+                {isSavingSnapshot ? "Saving..." : "Save snapshot"}
               </button>
-              <button
-                onClick={onAcceptEdit}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                Accept
-              </button>
-            </div>
-          )}
+            )}
+            {currentVersion && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onRejectEdit}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  Reject
+                </button>
+                <button
+                  onClick={onAcceptEdit}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 rounded-xl transition-all cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  Accept
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
