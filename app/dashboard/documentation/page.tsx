@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ElementType, type ReactNode } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -414,6 +414,8 @@ const steps: DocumentationStep[] = [
 export default function DocumentationPage() {
   const [activeStepId, setActiveStepId] = useState<string>(steps[0].id);
   const stepRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const activeStepIndex = useMemo(() => steps.findIndex((step) => step.id === activeStepId), [activeStepId]);
+  const activeStep = steps[Math.max(activeStepIndex, 0)];
   const activeStepRef = useRef(activeStepId);
 
   function handleNavClick(stepId: string) {
@@ -508,7 +510,7 @@ export default function DocumentationPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_420px]">
         <div className="space-y-4">
           {steps.map((step, index) => {
             const isActive = step.id === activeStepId;
@@ -557,67 +559,66 @@ export default function DocumentationPage() {
                 data-step-id={step.id}
                 className={`bg-white rounded-3xl shadow-sm border p-6 lg:p-8 ${isActive ? "border-blue-100" : "border-gray-100"}`}
               >
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-500">
-                        <NotebookPen className="w-4 h-4" />
-                        Flow step {index + 1} of {steps.length}
-                      </span>
-                      <div className="text-xs text-gray-400 font-mono">/{step.id}</div>
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-semibold text-gray-900">{step.title}</h2>
-                      <p className="text-gray-600 mt-3 leading-relaxed">{step.description}</p>
-                    </div>
-                    <div className="space-y-3">
-                      {step.highlights.map((highlight) => (
-                        <div
-                          key={highlight}
-                          className="flex items-start gap-3 text-gray-700 p-3 border border-gray-100 rounded-2xl bg-gray-50/60"
-                        >
-                          <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />
-                          </div>
-                          <p className="text-sm leading-relaxed">{highlight}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-blue-600 font-semibold">Do it inside Muse</p>
-                        <p className="text-sm text-blue-500 mt-1 leading-relaxed">
-                          {step.ctaLabel}. We&apos;ll keep your progress synced to your workspace automatically.
-                        </p>
-                      </div>
-                      <Link
-                        href={step.ctaHref}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
-                      >
-                        Go now
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </div>
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-500">
+                      <NotebookPen className="w-4 h-4" />
+                      Flow step {index + 1} of {steps.length}
+                    </span>
+                    <div className="text-xs text-gray-400 font-mono">/{step.id}</div>
                   </div>
-                  <aside className="rounded-[32px] border border-gray-100 bg-gradient-to-b from-white via-gray-50 to-white shadow-lg overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Live preview</p>
-                        <p className="text-sm text-gray-600 mt-1">What this step looks like inside Muse</p>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900">{step.title}</h2>
+                    <p className="text-gray-600 mt-3 leading-relaxed">{step.description}</p>
+                  </div>
+                  <div className="space-y-3">
+                    {step.highlights.map((highlight) => (
+                      <div
+                        key={highlight}
+                        className="flex items-start gap-3 text-gray-700 p-3 border border-gray-100 rounded-2xl bg-gray-50/60"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                        <p className="text-sm leading-relaxed">{highlight}</p>
                       </div>
-                      <span className="text-[11px] font-mono text-gray-500 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
-                        {step.id}
-                      </span>
+                    ))}
+                  </div>
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm text-blue-600 font-semibold">Do it inside Muse</p>
+                      <p className="text-sm text-blue-500 mt-1 leading-relaxed">
+                        {step.ctaLabel}. We&apos;ll keep your progress synced to your workspace automatically.
+                      </p>
                     </div>
-                    <div className="p-6 bg-gray-50/80">
-                      <div className="space-y-6">{step.preview}</div>
-                    </div>
-                  </aside>
+                    <Link
+                      href={step.ctaHref}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                    >
+                      Go now
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
               </section>
             );
           })}
         </div>
+
+        <aside className="rounded-[32px] border border-gray-100 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl overflow-hidden h-fit sticky top-24 self-start">
+          <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Live preview</p>
+              <p className="text-sm text-gray-600 mt-1">What this step looks like inside Muse</p>
+            </div>
+            <span className="text-[11px] font-mono text-gray-500 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
+              {activeStep?.id}
+            </span>
+          </div>
+          <div className="p-8 bg-gray-50/80 min-h-[200px]">
+            <div className="space-y-6">{activeStep?.preview}</div>
+          </div>
+        </aside>
       </div>
     </main>
   );
