@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks";
-import { Pencil, User as UserIcon, Users, LogOut, Download } from "lucide-react";
+import { Pencil, User as UserIcon, Users, LogOut, Download, BookOpen } from "lucide-react";
 
 export default function NavBar() {
   const router = useRouter();
@@ -45,6 +45,7 @@ export default function NavBar() {
     { path: '/dashboard/creators', label: 'Creators', icon: Users },
     { path: '/dashboard/content', label: 'Content', icon: Download },
     { path: '/dashboard/personal-info', label: 'Profile', icon: UserIcon },
+    { path: '/dashboard/documentation', label: 'Docs', icon: BookOpen },
   ];
 
   return (
