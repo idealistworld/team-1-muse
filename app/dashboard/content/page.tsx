@@ -17,7 +17,7 @@ const CONTENT_SORT_OPTIONS = [
   { value: "reactions", label: "Most reactions" },
   { value: "comments", label: "Most comments" },
   { value: "reposts", label: "Most reposts" },
-  { value: "multiplier", label: "Top vs avg" },
+  { value: "multiplier", label: "Biggest outperformers" },
 ] as const;
 
 type ContentSortOption = typeof CONTENT_SORT_OPTIONS[number]["value"];
