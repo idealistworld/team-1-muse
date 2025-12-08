@@ -11,6 +11,52 @@ import { useAuth } from "@/hooks";
 const POSTS_PER_PAGE = 20;
 
 type FilterType = "all" | "bangers" | "mid";
+const CONTENT_SORT_OPTIONS = [
+  { value: "recent", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "reactions", label: "Most reactions" },
+  { value: "comments", label: "Most comments" },
+  { value: "reposts", label: "Most reposts" },
+  { value: "multiplier", label: "Top vs avg" },
+] as const;
+
+type ContentSortOption = typeof CONTENT_SORT_OPTIONS[number]["value"];
+
+function sortContentPosts(
+  posts: ContentPost[],
+  sortType: ContentSortOption,
+  getMultiplier: (post: ContentPost) => number
+) {
+  const sorted = [...posts];
+  const defaultCompare = (a: ContentPost, b: ContentPost) =>
+    (b.postedAtTimestamp ?? 0) - (a.postedAtTimestamp ?? 0);
+
+  switch (sortType) {
+    case "recent":
+      return sorted.sort(defaultCompare);
+    case "oldest":
+      return sorted.sort((a, b) => (a.postedAtTimestamp ?? 0) - (b.postedAtTimestamp ?? 0));
+    case "reactions":
+      return sorted.sort(
+        (a, b) => (b.stats?.total_reactions ?? 0) - (a.stats?.total_reactions ?? 0)
+      );
+    case "comments":
+      return sorted.sort(
+        (a, b) => (b.stats?.comments ?? 0) - (a.stats?.comments ?? 0)
+      );
+    case "reposts":
+      return sorted.sort(
+        (a, b) => (b.stats?.reposts ?? 0) - (a.stats?.reposts ?? 0)
+      );
+    case "multiplier":
+      return sorted.sort((a, b) => {
+        const diff = getMultiplier(b) - getMultiplier(a);
+        return diff !== 0 ? diff : defaultCompare(a, b);
+      });
+    default:
+      return sorted.sort(defaultCompare);
+  }
+}
 
 export default function ContentPage() {
   const { user } = useAuth();
@@ -20,6 +66,7 @@ export default function ContentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [sortBy, setSortBy] = useState<ContentSortOption>("recent");
 
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ message: string } | null>(null);
@@ -51,11 +98,15 @@ export default function ContentPage() {
     });
   }, [allPosts, filter, getMultiplier]);
 
+  const sortedPosts = useMemo(() => {
+    return sortContentPosts(filteredPosts, sortBy, getMultiplier);
+  }, [filteredPosts, sortBy, getMultiplier]);
+
   // Infinite scroll - slice to visible count
   const visiblePosts = useMemo(() => {
-    return filteredPosts.slice(0, visibleCount);
-  }, [filteredPosts, visibleCount]);
-  const hasMore = visibleCount < filteredPosts.length;
+    return sortedPosts.slice(0, visibleCount);
+  }, [sortedPosts, visibleCount]);
+  const hasMore = visibleCount < sortedPosts.length;
 
   // Infinite scroll with Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -86,9 +137,14 @@ export default function ContentPage() {
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, loadMore]);
 
-  // Reset visible count when filter changes
+  // Reset visible count when filter/sort changes
   const handleFilterChange = (newFilter: FilterType) => {
     setFilter(newFilter);
+    setVisibleCount(POSTS_PER_PAGE);
+  };
+
+  const handleSortChange = (newSort: ContentSortOption) => {
+    setSortBy(newSort);
     setVisibleCount(POSTS_PER_PAGE);
   };
 
@@ -229,32 +285,49 @@ export default function ContentPage() {
               {filter === "all" ? "All Posts" : filter === "bangers" ? "Bangers" : "Mid Posts"} ({filteredPosts.length})
             </h2>
 
-            {/* Filter buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleFilterChange("all")}
-                variant={filter === "all" ? "default" : "ghost"}
-                size="sm"
-              >
-                All ({allPosts.length})
-              </Button>
-              <Button
-                onClick={() => handleFilterChange("bangers")}
-                variant={filter === "bangers" ? "default" : "ghost"}
-                size="sm"
-                className={filter === "bangers" ? "bg-orange-500 hover:bg-orange-600" : ""}
-              >
-                <Flame className="w-3.5 h-3.5" />
-                Bangers ({bangerCount})
-              </Button>
-              <Button
-                onClick={() => handleFilterChange("mid")}
-                variant={filter === "mid" ? "default" : "ghost"}
-                size="sm"
-              >
-                <TrendingDown className="w-3.5 h-3.5" />
-                Mid ({midCount})
-              </Button>
+            {/* Filter buttons & sorting */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => handleFilterChange("all")}
+                  variant={filter === "all" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  All ({allPosts.length})
+                </Button>
+                <Button
+                  onClick={() => handleFilterChange("bangers")}
+                  variant={filter === "bangers" ? "default" : "ghost"}
+                  size="sm"
+                  className={filter === "bangers" ? "bg-orange-500 hover:bg-orange-600" : ""}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  Bangers ({bangerCount})
+                </Button>
+                <Button
+                  onClick={() => handleFilterChange("mid")}
+                  variant={filter === "mid" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  <TrendingDown className="w-3.5 h-3.5" />
+                  Mid ({midCount})
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <label htmlFor="content-sort" className="whitespace-nowrap">Sort by</label>
+                <select
+                  id="content-sort"
+                  value={sortBy}
+                  onChange={(e) => handleSortChange(e.target.value as ContentSortOption)}
+                  className="min-w-[170px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                >
+                  {CONTENT_SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

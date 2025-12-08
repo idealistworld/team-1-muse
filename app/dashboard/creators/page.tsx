@@ -1,10 +1,46 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import type { Profile } from "@/types";
 import { useCreatePostViewModel } from "../create/createPostViewModel";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ProfileCard } from "../components/CreatorProfiles/ProfileCard";
+
+const CREATOR_SORT_OPTIONS = [
+  { value: "recommended", label: "Recommended order" },
+  { value: "recent", label: "Recently followed" },
+  { value: "posts", label: "Most posts" },
+  { value: "reactions", label: "Highest reactions" },
+  { value: "name", label: "Name A-Z" },
+] as const;
+
+type SortOption = typeof CREATOR_SORT_OPTIONS[number]["value"];
+
+function sortCreatorProfiles(profiles: Profile[], sortType: SortOption) {
+  if (sortType === "recommended") {
+    return profiles;
+  }
+
+  const sorted = [...profiles];
+
+  switch (sortType) {
+    case "recent":
+      return sorted.sort((a, b) => {
+        const aTime = a.followedAt ? new Date(a.followedAt).getTime() : 0;
+        const bTime = b.followedAt ? new Date(b.followedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+    case "posts":
+      return sorted.sort((a, b) => (b.postCount ?? 0) - (a.postCount ?? 0));
+    case "reactions":
+      return sorted.sort((a, b) => (b.avgReactions ?? 0) - (a.avgReactions ?? 0));
+    case "name":
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    default:
+      return profiles;
+  }
+}
 
 export default function CreatorsPage() {
   const {
@@ -16,6 +52,7 @@ export default function CreatorsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "following" | "discover">("all");
+  const [sortBy, setSortBy] = useState<SortOption>("recommended");
 
   // Filter profiles based on search and filter type
   const filteredProfiles = useMemo(() => {
@@ -35,9 +72,8 @@ export default function CreatorsPage() {
       );
     }
 
-    // Keep stable order (by ID/when added) - don't reorder on follow/unfollow
-    return filtered;
-  }, [creatorProfiles, searchQuery, filterType]);
+    return sortCreatorProfiles(filtered, sortBy);
+  }, [creatorProfiles, searchQuery, filterType, sortBy]);
 
   const followingCount = creatorProfiles.filter(p => p.isFollowed).length;
   const discoverCount = creatorProfiles.filter(p => !p.isFollowed).length;
@@ -53,8 +89,8 @@ export default function CreatorsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-xl p-4 mb-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex-1 w-full">
               <Input
                 value={searchQuery}
                 placeholder="Search creators..."
@@ -62,28 +98,45 @@ export default function CreatorsPage() {
                 className="bg-white"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setFilterType("all")}
-                variant={filterType === "all" ? "default" : "ghost"}
-                size="sm"
-              >
-                All ({creatorProfiles.length})
-              </Button>
-              <Button
-                onClick={() => setFilterType("following")}
-                variant={filterType === "following" ? "default" : "ghost"}
-                size="sm"
-              >
-                Following ({followingCount})
-              </Button>
-              <Button
-                onClick={() => setFilterType("discover")}
-                variant={filterType === "discover" ? "default" : "ghost"}
-                size="sm"
-              >
-                Discover ({discoverCount})
-              </Button>
+            <div className="flex flex-col gap-3 w-full md:w-auto md:flex-row md:items-center">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => setFilterType("all")}
+                  variant={filterType === "all" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  All ({creatorProfiles.length})
+                </Button>
+                <Button
+                  onClick={() => setFilterType("following")}
+                  variant={filterType === "following" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  Following ({followingCount})
+                </Button>
+                <Button
+                  onClick={() => setFilterType("discover")}
+                  variant={filterType === "discover" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  Discover ({discoverCount})
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <label htmlFor="creator-sort" className="whitespace-nowrap">Sort by</label>
+                <select
+                  id="creator-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="min-w-[170px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                >
+                  {CREATOR_SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
