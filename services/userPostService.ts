@@ -118,6 +118,23 @@ class UserPostService {
     }
   }
 
+  async fetchPostById(postId: string): Promise<UserPost | null> {
+    const { data, error } = await this.client
+      .from("user_posts")
+      .select("*")
+      .eq("post_id", postId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw new Error(error.message);
+    }
+
+    return data ? mapRowToUserPost(data) : null;
+  }
+
   async savePostTitle(postId: string, userId: string, title: string): Promise<void> {
     const { error } = await this.client.from("user_data").upsert(
       {
@@ -162,6 +179,21 @@ class UserPostService {
       }
     });
     return map;
+  }
+
+  async fetchPostTitle(postId: string, userId: string): Promise<string | null> {
+    const { data, error } = await this.client
+      .from("user_data")
+      .select("data")
+      .eq("user_id", userId)
+      .eq("key", `post_title:${postId}`)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data?.data as { title?: string } | undefined)?.title ?? null;
   }
 
 }

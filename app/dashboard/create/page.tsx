@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ContentFeed } from "@/app/dashboard/components/ContentFeed/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
 import { useContentEditorViewModel } from "./contentEditorViewModel";
@@ -13,6 +14,9 @@ import { ContentEditorCard } from "./components/ContentEditorCard";
 import { InspirationPostsCard } from "./components/InspirationPostsCard";
 import { AIAssistantPanel } from "./components/AIAssistantPanel";
 import type { ContentPost } from "@/types";
+import { toast } from "react-toastify";
+import { userPostService } from "@/services/userPostService";
+import { useAuth } from "@/hooks";
 
 export default function CreatePostPage() {
   const {
@@ -26,6 +30,12 @@ export default function CreatePostPage() {
   } = useCreatePostViewModel();
   const highlightedPosts = getHighlightedPosts();
   const [expandedPost, setExpandedPost] = useState<ContentPost | null>(null);
+  const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
+  const [isSnapshotSaving, setIsSnapshotSaving] = useState(false);
 
   // Use content editor view model
   const {
@@ -60,8 +70,80 @@ export default function CreatePostPage() {
   // Use suggested edits view model
   const editsVm = useSuggestedEditsViewModel(userContent, userContext);
 
+  const draftId = searchParams?.get("draftId");
+
+  React.useEffect(() => {
+    if (!user?.id || !draftId) return;
+
+    async function loadDraft() {
+      try {
+        const post = await userPostService.fetchPostById(draftId);
+        if (!post) {
+          toast.error("Draft not found");
+          return;
+        }
+        const title = await userPostService.fetchPostTitle(draftId, user.id);
+        setUserContent(post.rawText ?? "");
+        setEditingPostId(post.postId);
+        setEditingTitle(title ?? "");
+        toast.success("Draft loaded from Notebook");
+        router.replace("/dashboard/create");
+      } catch (error) {
+        console.error(error);
+        toast.error(error instanceof Error ? error.message : "Failed to load draft");
+      }
+    }
+
+    loadDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftId, user?.id]);
+
   function handleExpandPost(post: ContentPost) {
     setExpandedPost(post);
+  }
+
+  async function handleSaveSnapshot() {
+    if (!user) {
+      toast.error("Please sign in to save snapshots.");
+      return;
+    }
+
+    if (!userContent.trim()) {
+      toast.error("Write something before saving a snapshot.");
+      return;
+    }
+
+    const enteredTitle = window.prompt("Title this snapshot", editingTitle || "");
+    if (enteredTitle === null) {
+      return;
+    }
+    const snapshotTitle = enteredTitle.trim();
+    if (!snapshotTitle) {
+      toast.error("Snapshot title is required.");
+      return;
+    }
+
+    setIsSnapshotSaving(true);
+    try {
+      if (editingPostId) {
+        await userPostService.updatePost(editingPostId, { rawText: userContent });
+        await userPostService.savePostTitle(editingPostId, user.id, snapshotTitle);
+        toast.success("Snapshot updated");
+      } else {
+        const newPost = await userPostService.createPost(user.id, {
+          rawText: userContent,
+        });
+        await userPostService.savePostTitle(newPost.postId, user.id, snapshotTitle);
+        setEditingPostId(newPost.postId);
+        toast.success("Snapshot saved to Notebook");
+      }
+      setEditingTitle(snapshotTitle);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Failed to save snapshot");
+    } finally {
+      setIsSnapshotSaving(false);
+    }
   }
 
   return (
@@ -124,6 +206,9 @@ export default function CreatePostPage() {
                 editsVm.handleReset();
               }}
               onRejectEdit={editsVm.handleReset}
+              onSaveSnapshot={handleSaveSnapshot}
+              canSaveSnapshot={userContent.trim().length > 0}
+              isSavingSnapshot={isSnapshotSaving}
             />
 
             <InspirationPostsCard posts={highlightedPosts} creatorProfiles={creatorProfiles} />

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { NotebookPen, Search, Save, Trash2, Loader2, Sparkles, Clock3, BookOpen } from "lucide-react";
+import { NotebookPen, Search, Save, Trash2, Loader2, Sparkles, Clock3, BookOpen, Pencil } from "lucide-react";
 import { userPostService } from "@/services/userPostService";
 import type { UserPost } from "@/types";
 import { toast } from "react-toastify";
@@ -24,6 +25,7 @@ function getPostTitle(post: UserPost): string {
 
 export default function NotebookPage() {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(true);
@@ -135,6 +137,11 @@ export default function NotebookPage() {
   function handleSelect(post: UserPost) {
     setSelectedPostId(post.postId);
     setEditorValue(post.rawText ?? "");
+  }
+
+  function handleEditInCreate() {
+    if (!selectedPost) return;
+    router.push(`/dashboard/create?draftId=${selectedPost.postId}`);
   }
 
   if (isLoading || isFetching) {
@@ -269,6 +276,14 @@ export default function NotebookPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleEditInCreate}
+                        className="gap-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Edit in Create
+                      </Button>
                       <Button
                         onClick={handleSaveDraft}
                         disabled={!isDirty || isSaving}
