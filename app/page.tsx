@@ -106,7 +106,7 @@ const featureCards = [
 const pricingTiers = [
   {
     name: "Starter",
-    price: "$39",
+    price: "$50",
     cadence: "/mo",
     blurb: "Solo operators tracking what wins and drafting faster.",
     badge: "Best for solos",
@@ -115,7 +115,7 @@ const pricingTiers = [
   },
   {
     name: "Standard",
-    price: "$65",
+    price: "$100",
     cadence: "/mo",
     blurb: "Teams who want AI in the loop and room to collaborate.",
     badge: "Most popular",
@@ -124,7 +124,7 @@ const pricingTiers = [
   },
   {
     name: "Pro",
-    price: "$199",
+    price: "$250",
     cadence: "/mo",
     blurb: "Growing teams that need oversight, velocity, and support.",
     badge: "For scale",
