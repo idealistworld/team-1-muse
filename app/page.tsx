@@ -103,6 +103,36 @@ const featureCards = [
   },
 ];
 
+const pricingTiers = [
+  {
+    name: "Starter",
+    price: "$39",
+    cadence: "/mo",
+    blurb: "Solo operators tracking what wins and drafting faster.",
+    badge: "Best for solos",
+    highlight: false,
+    features: ["Post discovery", "Voice adaptation", "Basic analytics", "30-day money-back"],
+  },
+  {
+    name: "Standard",
+    price: "$65",
+    cadence: "/mo",
+    blurb: "Teams who want AI in the loop and room to collaborate.",
+    badge: "Most popular",
+    highlight: true,
+    features: ["Everything in Starter", "AI personalization", "Multi-profile support", "Team collaboration", "30-day money-back"],
+  },
+  {
+    name: "Pro",
+    price: "$199",
+    cadence: "/mo",
+    blurb: "Growing teams that need oversight, velocity, and support.",
+    badge: "For scale",
+    highlight: false,
+    features: ["Everything in Standard", "Team analytics", "Priority support", "API access", "30-day money-back"],
+  },
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#f7f9fb] text-slate-900">
@@ -497,6 +527,72 @@ export default function Home() {
                   </motion.div>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Pricing */}
+          <section id="pricing" className="mt-16 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing that mirrors your reach</h2>
+                <p className="mt-1 text-slate-600">Start simple, layer on AI and collaboration, and keep your money with a 30-day guarantee.</p>
+              </div>
+              <span className="hidden rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm shadow-slate-300 sm:inline-flex">
+                Monthly, cancel anytime
+              </span>
+            </div>
+            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-blue-50/70 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] md:p-8">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(85,120,200,0.09),transparent_35%),radial-gradient(circle_at_85%_30%,rgba(0,0,0,0.05),transparent_30%)]" />
+              <div className="relative grid gap-4 md:grid-cols-3">
+                {pricingTiers.map((tier) => (
+                  <motion.div
+                    key={tier.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className={`flex flex-col gap-4 rounded-2xl border ${
+                      tier.highlight ? "border-slate-900 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)]" : "border-slate-200 bg-white/90 shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
+                    } px-5 py-6`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{tier.badge}</div>
+                      {tier.highlight && (
+                        <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white shadow-sm shadow-slate-300">
+                          Most popular
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-lg font-semibold text-slate-900">{tier.name}</div>
+                      <div className="flex items-baseline gap-1 text-4xl font-semibold text-slate-900">
+                        {tier.price}
+                        <span className="text-sm font-semibold text-slate-500">{tier.cadence}</span>
+                      </div>
+                      <p className="text-sm text-slate-600">{tier.blurb}</p>
+                    </div>
+                    <div className="space-y-2">
+                      {tier.features.map((feature) => (
+                        <div key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                          <CheckCircle2 className={`mt-0.5 h-4 w-4 ${tier.highlight ? "text-sky-600" : "text-emerald-500"}`} />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <Link
+                      href="/login"
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                        tier.highlight
+                          ? "bg-slate-900 text-white shadow-md shadow-slate-300 hover:-translate-y-[1px] hover:bg-black"
+                          : "border border-slate-200 bg-white text-slate-800 shadow-sm hover:-translate-y-[1px] hover:shadow-md"
+                      }`}
+                    >
+                      Choose {tier.name}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </section>
 
