@@ -31,6 +31,7 @@ type DocumentationStep = {
   ctaHref: string;
   icon: ElementType;
   preview: ReactNode;
+  previewEmbedPath?: string;
 };
 
 type PreviewInputFieldProps = {
@@ -328,6 +329,7 @@ const steps: DocumentationStep[] = [
     ctaHref: "/dashboard/personal-info",
     icon: UserRound,
     preview: <PersonalInfoPreview />,
+    previewEmbedPath: "/dashboard/personal-info",
   },
   {
     id: "creators",
@@ -344,6 +346,7 @@ const steps: DocumentationStep[] = [
     ctaHref: "/dashboard/creators",
     icon: Target,
     preview: <CreatorsPreview />,
+    previewEmbedPath: "/dashboard/creators",
   },
   {
     id: "library",
@@ -360,6 +363,7 @@ const steps: DocumentationStep[] = [
     ctaHref: "/dashboard/content",
     icon: FolderOpen,
     preview: <ContentLibraryPreview />,
+    previewEmbedPath: "/dashboard/content",
   },
   {
     id: "highlight",
@@ -376,6 +380,7 @@ const steps: DocumentationStep[] = [
     ctaHref: "/dashboard/create",
     icon: Highlighter,
     preview: <HighlightPreview />,
+    previewEmbedPath: "/dashboard/create",
   },
   {
     id: "context",
@@ -408,6 +413,7 @@ const steps: DocumentationStep[] = [
     ctaHref: "/dashboard/create",
     icon: Wand2,
     preview: <IterationPreview />,
+    previewEmbedPath: "/dashboard/create",
   },
 ];
 
@@ -510,7 +516,7 @@ export default function DocumentationPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_420px]">
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1.1fr)_600px]">
         <div className="space-y-4">
           {steps.map((step, index) => {
             const isActive = step.id === activeStepId;
@@ -616,7 +622,15 @@ export default function DocumentationPage() {
             </span>
           </div>
           <div className="p-8 bg-gray-50/80 min-h-[200px]">
-            <div className="space-y-6">{activeStep?.preview}</div>
+            {activeStep?.previewEmbedPath ? (
+              <iframe
+                src={`${activeStep.previewEmbedPath}?embed=docs`}
+                className="w-full h-[620px] rounded-[24px] border border-gray-200 bg-white"
+                loading="lazy"
+              />
+            ) : (
+              <div className="space-y-6">{activeStep?.preview}</div>
+            )}
           </div>
         </aside>
       </div>
