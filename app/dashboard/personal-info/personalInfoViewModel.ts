@@ -3,7 +3,7 @@
  * Handles business logic and state management for user profile data
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createUserProfileService, PersonalInfoData } from "@/services/userProfileService";
 import { useAuth } from "@/hooks";
 
@@ -28,7 +28,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const userProfileService = createUserProfileService(supabase);
+  const userProfileService = useMemo(() => createUserProfileService(supabase), [supabase]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<string>("");
   const hasInitiallyLoadedRef = useRef(false);
@@ -59,7 +59,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
     }
 
     loadData();
-  }, [user]);
+  }, [user, userProfileService]);
 
   // Auto-save with debouncing
   useEffect(() => {
@@ -102,7 +102,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formData, isLoading, user]);
+  }, [formData, isLoading, user, userProfileService]);
 
   const updateField = useCallback((fieldId: string, value: string) => {
     setFormData((prev) => ({

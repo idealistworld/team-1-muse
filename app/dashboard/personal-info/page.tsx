@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { personalInfoCategories } from "./personalInfoDataPoints";
 import { ChevronDown, ChevronRight, Mic, Check, RotateCcw, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { ProfileCoverageCard } from "../components/shared/ProfileCoverageCard";
-import { useAuth } from "@/hooks";
 import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
 import { getSpeechRecognition } from "@/types";
 import { usePersonalInfoViewModel } from "./personalInfoViewModel";
 import { extractionClient } from "@/services/extractionClient";
 
 export default function PersonalInfoPage() {
-  const { user } = useAuth();
 
   // Use ViewModel for data management
   const {
@@ -446,13 +444,11 @@ export default function PersonalInfoPage() {
   const resetCategory = (categoryId: string) => {
     const category = personalInfoCategories.find(c => c.id === categoryId);
     if (category) {
-      setFormData(prev => {
-        const newData = { ...prev };
-        category.dataPoints.forEach(dp => {
-          delete newData[dp.id];
-        });
-        return newData;
+      const newData = { ...formData };
+      category.dataPoints.forEach(dp => {
+        delete newData[dp.id];
       });
+      setFormData(newData);
       toast.success(`Reset ${category.title}`);
     }
   };
