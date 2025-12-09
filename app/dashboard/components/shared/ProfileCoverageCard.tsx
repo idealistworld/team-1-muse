@@ -117,7 +117,7 @@ export function ProfileCoverageCard({ categories, onStartVoiceMode, onPauseVoice
     }, duration / steps);
 
     return () => clearInterval(timer);
-  }, [percentage]);
+  }, [percentage, displayPercent]);
 
   // Ring dimensions
   const size = 440;

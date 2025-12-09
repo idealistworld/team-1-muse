@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import NavBar from "./dashboard/components/NavBar";
 import { ToastContainer } from "react-toastify";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export default function LayoutContent({
+function LayoutContentInner({
   children,
 }: {
   children: React.ReactNode;
@@ -25,5 +26,17 @@ export default function LayoutContent({
       {/* Toasts */}
       <ToastContainer />
     </>
+  );
+}
+
+export default function LayoutContent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </Suspense>
   );
 }

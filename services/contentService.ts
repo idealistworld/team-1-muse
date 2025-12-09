@@ -94,7 +94,7 @@ export class ContentService {
     });
 
     // Sort by LinkedIn post date (newest first)
-    return posts.sort((a, b) => (b.postedAtTimestamp || 0) - (a.postedAtTimestamp || 0));
+    return posts.sort((a: ContentPost, b: ContentPost) => (b.postedAtTimestamp || 0) - (a.postedAtTimestamp || 0));
   }
 
   async fetchCreatorContentById(creatorId: number): Promise<ContentPost[]> {

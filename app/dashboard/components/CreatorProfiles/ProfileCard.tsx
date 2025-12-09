@@ -54,17 +54,17 @@ export function ProfileCard({
       <div className="flex flex-wrap items-center gap-3 text-gray-500">
         {hasStats ? (
           <>
-            <div className="flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-sm text-rose-500" title="Avg reactions">
+            <div className="flex items-center gap-1 text-sm text-gray-500" title="Avg reactions">
               <Heart className="h-3.5 w-3.5" />
-              <span className="font-medium">{avgReactions?.toLocaleString()}</span>
+              <span>{avgReactions?.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-sm text-blue-500" title="Avg comments">
+            <div className="flex items-center gap-1 text-sm text-gray-500" title="Avg comments">
               <MessageCircle className="h-3.5 w-3.5" />
-              <span className="font-medium">{avgComments?.toLocaleString()}</span>
+              <span>{avgComments?.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-sm text-emerald-600" title="Avg reposts">
+            <div className="flex items-center gap-1 text-sm text-gray-500" title="Avg reposts">
               <Repeat2 className="h-3.5 w-3.5" />
-              <span className="font-medium">{avgReposts?.toLocaleString()}</span>
+              <span>{avgReposts?.toLocaleString()}</span>
             </div>
           </>
         ) : (

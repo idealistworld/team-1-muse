@@ -85,7 +85,6 @@ export default function NotebookPage() {
         toast.error("Failed to load notebook");
       })
       .finally(() => setIsFetching(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   useEffect(() => {
@@ -94,7 +93,7 @@ export default function NotebookPage() {
     } else {
       setEditorValue("");
     }
-  }, [selectedPost?.postId, selectedPost?.rawText]);
+  }, [selectedPost]);
 
   async function handleSaveDraft() {
     if (!selectedPost) return;
@@ -198,7 +197,7 @@ export default function NotebookPage() {
                 <Link href="/dashboard/create">Go to Create workspace</Link>
               </Button>
               <p className="text-xs text-gray-400 text-center">
-                Use "Save snapshot" on Create to capture new drafts.
+                Use &ldquo;Save snapshot&rdquo; on Create to capture new drafts.
               </p>
             </div>
           </div>
@@ -216,7 +215,7 @@ export default function NotebookPage() {
             <Button asChild className="mt-2">
               <Link href="/dashboard/create">Open Create workspace</Link>
             </Button>
-            <p className="text-xs text-gray-400">Click "Save snapshot" on the Create tab to send drafts here.</p>
+            <p className="text-xs text-gray-400">Click &ldquo;Save snapshot&rdquo; on the Create tab to send drafts here.</p>
           </div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-[320px_1fr]">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ContentFeed } from "@/app/dashboard/components/ContentFeed/ContentFeed";
 import { useCreatePostViewModel } from "./createPostViewModel";
@@ -18,7 +18,7 @@ import { toast } from "react-toastify";
 import { userPostService } from "@/services/userPostService";
 import { useAuth } from "@/hooks";
 
-export default function CreatePostPage() {
+function CreatePostPageContent() {
   const {
     filteredContentFeed,
     togglePostHighlight,
@@ -76,6 +76,7 @@ export default function CreatePostPage() {
     if (!user?.id || !draftId) return;
 
     async function loadDraft() {
+      if (!draftId || !user?.id) return;
       try {
         const post = await userPostService.fetchPostById(draftId);
         if (!post) {
@@ -242,5 +243,13 @@ export default function CreatePostPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CreatePostPageContent />
+    </Suspense>
   );
 }

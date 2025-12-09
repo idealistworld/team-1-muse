@@ -5,6 +5,7 @@ import { Loader2, Plus, UserPlus, Heart, MessageCircle, Repeat2, Flame, Trending
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { contentService } from "@/services/contentService";
+import { scraperClient } from "@/services/scraperClient";
 import type { ContentPost, Profile } from "@/types";
 import { useAuth } from "@/hooks";
 
@@ -192,13 +193,7 @@ export default function ContentPage() {
     setResult(null);
 
     try {
-      const response = await fetch("/api/scrape/linkedin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileUrls: [newCreatorUrl] }),
-      });
-
-      const data = await response.json();
+      const data = await scraperClient.scrapeLinkedInProfiles([newCreatorUrl]);
 
       if (data.success) {
         setResult({ message: `Added creator and fetched ${data.postsScraped} posts!` });

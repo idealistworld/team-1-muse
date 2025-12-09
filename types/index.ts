@@ -8,6 +8,25 @@ export interface UserData<T = Record<string, unknown>> {
   updated_at: string;
 }
 
+// Post status type
+export type PostStatus = "draft" | "scheduled" | "published" | null;
+
+// User post type
+export interface UserPost {
+  postId: string;
+  userId: string;
+  title?: string;
+  rawText: string;
+  status?: PostStatus | null;
+  editorState?: any;
+  scheduledFor?: string;
+  publishedAt?: string;
+  wordCount?: number;
+  inspirationSummary?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Profile data structure
 export interface ProfileData {
   fullName?: string;

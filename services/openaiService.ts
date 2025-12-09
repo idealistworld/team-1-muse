@@ -130,22 +130,35 @@ ${conversationHistory.length === 0 ? 'START by asking your first question about 
       )}\n\nUse this context to make the content authentic, personalized, and relevant to the user's specific situation.`;
     }
 
-    // Build similarity instruction based on the slider value
-    // Note: similarity is now 0-100 where 100 = very similar, 0 = very different
+    // Build similarity instruction
     let similarityInstruction = "";
     if (similarity !== undefined) {
-      if (similarity >= 70) {
-        similarityInstruction = "\n\nSIMILARITY LEVEL: Very similar to original - only make minimal changes to personalize key details while keeping most of the original wording and structure intact.";
-      } else if (similarity >= 30) {
-        similarityInstruction = "\n\nSIMILARITY LEVEL: Moderate changes - adapt the content significantly while preserving the core message and flow. Rewrite paragraphs in the user's voice.";
-      } else {
-        similarityInstruction = "\n\nSIMILARITY LEVEL: Very different - significantly rewrite the content to feel completely original to the user while maintaining the core insights. Use different examples, structure, and phrasing.";
-      }
+      const extraInstructions = similarity < 30
+        ? `\n\nBECAUSE THIS IS BELOW 30% SIMILARITY:
+- Completely restructure the post - don't follow the original's flow
+- Use different sentence structures and lengths throughout
+- Change the opening hook entirely
+- Rearrange the order of ideas
+- Rewrite every sentence from scratch - no copy-pasting phrases
+- Make it feel like a completely different post about the same topic`
+        : "";
+
+      similarityInstruction = `\n\nYOU ARE A COPY TRADER: Extract the core best parts and winning patterns from the original, but never plagiarize.
+
+KEEP: The same subject matter, topic, and core insights.
+
+SIMILARITY LEVEL: Make the output ${similarity}% similar to the original in terms of:
+- Structure and layout
+- Sentence patterns
+- Word choice and phrasing
+
+At ${similarity}% similarity, adjust how much you change the structure, sentences, and words accordingly. Lower percentages = more different from the original.${extraInstructions}`;
     }
 
     const systemPrompt = prompt
       ? `You are a content editor. The conversation history shows previous edits that have ALREADY been applied. Only apply the LATEST user instruction - do NOT re-apply previous changes. Return ONLY the edited content with no explanations.${contextSection}${similarityInstruction}`
-      : `You are a content personalization expert. Your job is to adapt the provided post to make it feel like it was written BY the user FOR their specific audience.
+      : context && Object.keys(context).length > 0
+      ? `You are a content personalization expert. Your job is to adapt the provided post to make it feel like it was written BY the user FOR their specific audience.
 
 IMPORTANT RULES:
 1. KEEP the core message, story, and insights from the original post
@@ -157,7 +170,15 @@ IMPORTANT RULES:
 7. Make it feel authentic to the user's background and audience
 8. KEEP approximately the same word count as the original (within 10-20%)
 
-Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}${similarityInstruction}`;
+Think of this as "translating" the post to the user's world, not writing a new post.${contextSection}${similarityInstruction}`
+      : `You are a copy trader. Your job is to rewrite the provided post based on the similarity level, keeping the same examples, stories, and companies from the original.
+
+IMPORTANT RULES:
+1. DO NOT add placeholders like [Your Company Name] or [Your Industry]
+2. KEEP the same examples, companies, and stories from the original (e.g., if it mentions Celsius, keep Celsius)
+3. Rewrite the structure, sentences, and wording based on the similarity percentage
+4. The goal is to learn from the winning pattern, not personalize it
+5. KEEP approximately the same word count as the original (within 10-20%)${similarityInstruction}`;
 
     // Build messages array
     const messages: Array<{

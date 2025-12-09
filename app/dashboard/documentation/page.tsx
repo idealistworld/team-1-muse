@@ -419,7 +419,7 @@ const steps: DocumentationStep[] = [
 
 export default function DocumentationPage() {
   const [activeStepId, setActiveStepId] = useState<string>(steps[0].id);
-  const stepRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const stepRefs = useRef<Record<string, HTMLElement | null>>({});
   const activeStepIndex = useMemo(() => steps.findIndex((step) => step.id === activeStepId), [activeStepId]);
   const activeStep = steps[Math.max(activeStepIndex, 0)];
   const activeStepRef = useRef(activeStepId);

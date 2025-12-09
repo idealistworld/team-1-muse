@@ -171,8 +171,8 @@ class UserPostService {
     }
 
     const map: Record<string, string> = {};
-    (data ?? []).forEach((row) => {
-      const postId = (row.key as string)?.replace("post_title:", "");
+    (data ?? []).forEach((row: { key: string; data: { title?: string } }) => {
+      const postId = row.key?.replace("post_title:", "");
       const title = row.data?.title;
       if (postId && typeof title === "string") {
         map[postId] = title;
