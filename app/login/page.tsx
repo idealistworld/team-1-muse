@@ -29,12 +29,13 @@ export default function Login() {
     if (error) {
       toast.error(`Sign in failed: ${error.message}`);
       setError(error.message);
+      setLoading(false);
     } else {
       toast.success("Successfully signed in!");
+      // Refresh to sync auth state with middleware, then redirect
+      router.refresh();
       router.push("/dashboard/create");
     }
-
-    setLoading(false);
   }
 
   return (
