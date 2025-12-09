@@ -38,19 +38,18 @@ export default function PersonalInfoPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const wasSavingRef = useRef(false);
 
-  // Show toast when save completes
+  // Show toast only when save completes (not on initial load)
   useEffect(() => {
-    if (!isSaving && !hasUnsavedChanges && Object.keys(formData).length > 0) {
+    // Only show toast if we were just saving and now we're done
+    if (wasSavingRef.current && !isSaving && !hasUnsavedChanges) {
       toast.success('Saved!', { autoClose: 1500 });
+      wasSavingRef.current = false;
+    } else if (isSaving) {
+      wasSavingRef.current = true;
     }
-  }, [isSaving, hasUnsavedChanges, formData]);
-
-  // Show error toast on save failure
-  useEffect(() => {
-    // This will be triggered if the ViewModel throws an error
-    // In a production app, you'd want better error handling
-  }, []);
+  }, [isSaving, hasUnsavedChanges]);
 
   // Get all fields in order
   const getAllFields = () => {
