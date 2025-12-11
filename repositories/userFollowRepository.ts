@@ -10,7 +10,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreatorProfile } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { serviceClient } from "@/lib/supabase/service";
 
 interface UserFollow {
   user_id: string;
@@ -128,5 +128,5 @@ export class UserFollowRepository {
   }
 }
 
-// Singleton instance
-export const userFollowRepository = new UserFollowRepository(createClient());
+// Singleton instance with service role client (bypasses RLS)
+export const userFollowRepository = new UserFollowRepository(serviceClient);

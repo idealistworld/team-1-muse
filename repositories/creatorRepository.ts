@@ -10,7 +10,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreatorProfile } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { serviceClient } from "@/lib/supabase/service";
 
 export class CreatorRepository {
   constructor(private supabase: SupabaseClient) {}
@@ -97,5 +97,5 @@ export class CreatorRepository {
   }
 }
 
-// Singleton instance
-export const creatorRepository = new CreatorRepository(createClient());
+// Singleton instance with service role client (bypasses RLS)
+export const creatorRepository = new CreatorRepository(serviceClient);

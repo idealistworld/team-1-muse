@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { ContentPost, Profile } from "@/types";
-import { contentService } from "@/services/contentService";
 import { scraperClient } from "@/services/scraperClient";
 import {
   sortContentPosts,
@@ -103,14 +102,22 @@ export function useContentPageViewModel(userId?: string): ContentPageViewModel {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [postsData, creatorsData] = await Promise.all([
-        contentService.fetchCreatorContent({ limit: 1000 }), // Load all
-        contentService.fetchCreators(userId),
-      ]);
+      // Fetch posts
+      const postsRes = await fetch('/api/content/fetch?limit=1000');
+      if (!postsRes.ok) throw new Error('Failed to fetch posts');
+      const { data: postsData } = await postsRes.json();
+
+      // Fetch creators
+      const creatorsUrl = userId
+        ? `/api/creators/fetch?user_id=${userId}`
+        : '/api/creators/fetch';
+      const creatorsRes = await fetch(creatorsUrl);
+      if (!creatorsRes.ok) throw new Error('Failed to fetch creators');
+      const { data: creatorsData } = await creatorsRes.json();
+
       setAllPosts(postsData);
       setCreators(creatorsData);
     } catch (err) {
-      // Error is already shown to user via setError
       setError("Failed to load content");
     } finally {
       setIsLoading(false);

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import type { ContentPost, Profile } from "@/types";
-import { contentService } from "@/services/contentService";
-import { followCreator as followCreatorApi, unfollowCreator as unfollowCreatorApi } from "@/services/creatorClient";
 import { toast } from "react-toastify";
 import { useAuth } from "@/hooks";
 
@@ -29,16 +27,25 @@ export function useCreatePostViewModel() {
     });
   }
 
-  // Fetch creator content and profiles from service
+  // Fetch creator content and profiles from API
   useEffect(() => {
     let isMounted = true;
 
     async function fetchData() {
       try {
-        const [posts, creators] = await Promise.all([
-          contentService.fetchCreatorContent(),
-          contentService.fetchCreators(user?.id ?? undefined),
-        ]);
+        // Fetch posts
+        const postsRes = await fetch('/api/content/fetch?limit=1000');
+        if (!postsRes.ok) throw new Error('Failed to fetch posts');
+        const { data: posts } = await postsRes.json();
+
+        // Fetch creators
+        const creatorsUrl = user?.id
+          ? `/api/creators/fetch?user_id=${user.id}`
+          : '/api/creators/fetch';
+        const creatorsRes = await fetch(creatorsUrl);
+        if (!creatorsRes.ok) throw new Error('Failed to fetch creators');
+        const { data: creators } = await creatorsRes.json();
+
         if (isMounted) {
           setContentFeed(posts);
           setCreatorProfiles(creators);
@@ -47,7 +54,6 @@ export function useCreatePostViewModel() {
       } catch (error) {
         if (isMounted) {
           toast.error("Failed to load content. Please try again.");
-          // Error is already shown to user via toast
         }
       }
     }
@@ -201,7 +207,14 @@ export function useCreatePostViewModel() {
     setPending(creatorId, true);
 
     try {
-      await followCreatorApi(creatorId, accessToken);
+      const res = await fetch('/api/creators/follow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to follow creator');
+
       toast.success("Creator followed.");
     } catch (error) {
       // Rollback to previous state on error
@@ -264,7 +277,14 @@ export function useCreatePostViewModel() {
     setPending(creatorId, true);
 
     try {
-      await unfollowCreatorApi(creatorId, accessToken);
+      const res = await fetch('/api/creators/unfollow', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorId }),
+      });
+
+      if (!res.ok) throw new Error('Failed to unfollow creator');
+
       toast.success("Creator unfollowed.");
     } catch (error) {
       // Rollback on error

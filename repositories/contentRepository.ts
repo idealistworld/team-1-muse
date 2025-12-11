@@ -10,7 +10,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreatorContent } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { serviceClient } from "@/lib/supabase/service";
 
 interface CreatorContentWithProfile {
   content_id: number;
@@ -153,5 +153,5 @@ export class ContentRepository {
   }
 }
 
-// Singleton instance
-export const contentRepository = new ContentRepository(createClient());
+// Singleton instance with service role client (bypasses RLS)
+export const contentRepository = new ContentRepository(serviceClient);

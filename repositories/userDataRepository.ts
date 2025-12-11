@@ -9,7 +9,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import { serviceClient } from "@/lib/supabase/service";
 
 interface UserDataRow {
   user_id: string;
@@ -29,6 +29,8 @@ export class UserDataRepository {
     userId: string,
     key: string
   ): Promise<Record<string, unknown> | null> {
+    console.log(`[UserDataRepository] Query: userId=${userId}, key=${key}`);
+
     const { data, error } = await this.supabase
       .from("user_data")
       .select("data")
@@ -36,15 +38,21 @@ export class UserDataRepository {
       .eq("key", key)
       .single();
 
+    console.log(`[UserDataRepository] Result:`, { data, error });
+
     if (error) {
       // PGRST116 = "not found" error from Supabase
       if (error.code === "PGRST116") {
+        console.log(`[UserDataRepository] No data found (PGRST116)`);
         return null;
       }
+      console.error(`[UserDataRepository] Error:`, error);
       throw new Error(error.message);
     }
 
-    return (data?.data as Record<string, unknown>) || null;
+    const result = (data?.data as Record<string, unknown>) || null;
+    console.log(`[UserDataRepository] Returning:`, result);
+    return result;
   }
 
   /**
@@ -108,5 +116,5 @@ export class UserDataRepository {
   }
 }
 
-// Singleton instance
-export const userDataRepository = new UserDataRepository(createClient());
+// Singleton instance with service role client (bypasses RLS)
+export const userDataRepository = new UserDataRepository(serviceClient);

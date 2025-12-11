@@ -16,7 +16,6 @@ import { InspirationPostsCard } from "./components/InspirationPostsCard";
 import { AIAssistantPanel } from "./components/AIAssistantPanel";
 import type { ContentPost } from "@/types";
 import { toast } from "react-toastify";
-import { userPostService } from "@/services/userPostService";
 import { useAuth } from "@/hooks";
 
 function CreatePostPageContent() {
@@ -79,7 +78,11 @@ function CreatePostPageContent() {
     async function loadDraft() {
       if (!draftId || !user?.id) return;
       try {
-        const post = await userPostService.fetchPostById(draftId);
+        const res = await fetch(`/api/user-posts/${draftId}`);
+        if (!res.ok) {
+          throw new Error('Failed to load draft');
+        }
+        const { data: post } = await res.json();
         if (!post) {
           toast.error("Draft not found");
           return;
@@ -113,33 +116,49 @@ function CreatePostPageContent() {
       return;
     }
 
-    const enteredTitle = window.prompt("Title this snapshot", editingTitle || "");
-    if (enteredTitle === null) {
-      return;
-    }
-    const snapshotTitle = enteredTitle.trim();
-    if (!snapshotTitle) {
-      toast.error("Snapshot title is required.");
-      return;
-    }
-
     setIsSnapshotSaving(true);
     try {
       if (editingPostId) {
-        await userPostService.updatePost(editingPostId, {
-          rawText: userContent,
-          title: snapshotTitle
+        const res = await fetch(`/api/user-posts/${editingPostId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rawText: userContent,
+          }),
         });
+        if (!res.ok) throw new Error('Failed to update snapshot');
         toast.success("Snapshot updated");
       } else {
-        const newPost = await userPostService.createPost(user.id, {
-          rawText: userContent,
-          title: snapshotTitle,
+        const res = await fetch('/api/user-posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            rawText: userContent,
+          }),
         });
+        if (!res.ok) {
+          console.error('Save snapshot failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            headers: Object.fromEntries(res.headers.entries())
+          });
+          const text = await res.text();
+          console.error('Response body:', text);
+
+          let errorData;
+          try {
+            errorData = JSON.parse(text);
+          } catch {
+            errorData = { error: text || 'Failed to create snapshot' };
+          }
+
+          throw new Error(errorData.error || 'Failed to create snapshot');
+        }
+        const { data: newPost } = await res.json();
         setEditingPostId(newPost.postId);
         toast.success("Snapshot saved to Notebook");
       }
-      setEditingTitle(snapshotTitle);
     } catch (error) {
       logger.error("Failed to save snapshot", error);
       toast.error(error instanceof Error ? error.message : "Failed to save snapshot");

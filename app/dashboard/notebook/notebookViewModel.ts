@@ -6,7 +6,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { UserPost } from "@/types";
-import { userPostService } from "@/services/userPostService";
 import { toast } from "react-toastify";
 import { logger } from "@/lib/logger";
 
@@ -83,12 +82,17 @@ export function useNotebookViewModel(userId?: string): NotebookViewModel {
   // Computed: is editor dirty
   const isDirty = selectedPost ? editorValue !== (selectedPost.rawText ?? "") : false;
 
-  // Load posts from service
+  // Load posts from API
   useEffect(() => {
     if (!userId) return;
     setIsFetching(true);
-    userPostService
-      .fetchUserPosts(userId)
+
+    fetch(`/api/user-posts?user_id=${userId}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to fetch posts');
+        const { data } = await res.json();
+        return data;
+      })
       .then((fetchedPosts) => {
         setPosts(fetchedPosts);
         if (fetchedPosts.length > 0) {
@@ -125,9 +129,15 @@ export function useNotebookViewModel(userId?: string): NotebookViewModel {
     if (!selectedPost) return;
     setIsSaving(true);
     try {
-      const updated = await userPostService.updatePost(selectedPost.postId, {
-        rawText: editorValue,
+      const res = await fetch(`/api/user-posts/${selectedPost.postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: editorValue }),
       });
+
+      if (!res.ok) throw new Error('Failed to save draft');
+      const { data: updated } = await res.json();
+
       setPosts((prev) =>
         prev.map((post) => (post.postId === updated.postId ? updated : post))
       );
@@ -147,7 +157,12 @@ export function useNotebookViewModel(userId?: string): NotebookViewModel {
         return;
       }
       try {
-        await userPostService.deletePost(postId);
+        const res = await fetch(`/api/user-posts/${postId}`, {
+          method: 'DELETE',
+        });
+
+        if (!res.ok) throw new Error('Failed to delete draft');
+
         setPosts((prev) => prev.filter((post) => post.postId !== postId));
         if (selectedPostId === postId) {
           setSelectedPostId(null);

@@ -11,7 +11,6 @@ import type { PostStatus, UserPost } from "@/types";
 import { UserPostRepository, userPostRepository } from "@/repositories/userPostRepository";
 
 interface CreatePostInput {
-  title?: string;
   rawText?: string;
   status?: PostStatus;
 }
@@ -32,7 +31,6 @@ class UserPostService {
   async createPost(userId: string, input: CreatePostInput = {}): Promise<UserPost> {
     return this.repository.create({
       userId,
-      title: input.title,
       rawText: input.rawText,
       status: input.status,
     });

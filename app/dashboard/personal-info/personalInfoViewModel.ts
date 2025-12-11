@@ -4,8 +4,11 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { userProfileService, PersonalInfoData } from "@/services/userProfileService";
 import { useAuth } from "@/hooks";
+
+export interface PersonalInfoData {
+  [key: string]: string;
+}
 
 export interface PersonalInfoViewModel {
   // State
@@ -41,13 +44,24 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
       }
 
       try {
-        const data = await userProfileService.loadPersonalInfo(user.id);
-        setFormData(data);
-        lastSavedDataRef.current = JSON.stringify(data);
+        console.log('[PersonalInfo] Loading for user_id:', user.id);
+        const res = await fetch(`/api/user-data/personal-info?user_id=${user.id}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error('[PersonalInfo] Failed to load:', errorData);
+          throw new Error('Failed to load personal info');
+        }
+        const { data } = await res.json();
+
+        console.log('[PersonalInfo] Loaded data:', data);
+        setFormData(data || {});
+        lastSavedDataRef.current = JSON.stringify(data || {});
         setHasUnsavedChanges(false);
       } catch (error) {
-        // Error is re-thrown to be handled by caller
-        throw error;
+        console.error('Error loading personal info:', error);
+        // Set empty object on error so form still works
+        setFormData({});
+        lastSavedDataRef.current = JSON.stringify({});
       } finally {
         setIsLoading(false);
         // Mark as initially loaded after a short delay to prevent immediate save
@@ -84,7 +98,15 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
       if (dataStr !== lastSavedDataRef.current) {
         try {
           setIsSaving(true);
-          await userProfileService.savePersonalInfo(user.id, formData);
+
+          const res = await fetch('/api/user-data/personal-info', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, data: formData }),
+          });
+
+          if (!res.ok) throw new Error('Failed to save personal info');
+
           lastSavedDataRef.current = dataStr;
           setHasUnsavedChanges(false);
         } catch (error) {

@@ -68,18 +68,18 @@ DO NOT ask about information we already have. Focus on what's missing and what's
 Rules:
 1. ALWAYS ask ONE specific, relevant question at a time
 2. Base follow-up questions on their previous answers
-3. ONLY after you have enough context (existing data + answers to 2-4 questions), respond with ONLY: "READY_TO_GENERATE"
-4. If we already have good profile data, you can be ready after fewer questions
-5. Be thorough - don't skip details that need personalization
+3. You MUST ask at least 1-2 questions, even if we have profile data (post-specific context is important)
+4. After 2-4 questions total, respond with ONLY: "READY_TO_GENERATE"
+5. Focus on post-specific details that aren't in the profile (stories, examples, metrics)
 6. Make questions conversational and natural
 
 Post to personalize:
 ${postContent}
 
 Current conversation length: ${conversationHistory.length} messages
-${existingDataSection ? `\nWe already have profile data, so fewer questions may be needed.` : ''}
+${existingDataSection ? `\nWe have profile data, but you MUST still ask 1-2 questions about post-specific details.` : ''}
 
-${conversationHistory.length === 0 ? 'START by asking your first question about something we don\'t already know.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have enough context.'}`;
+${conversationHistory.length === 0 ? 'START by asking your first question about post-specific context (stories, examples, metrics, experiences).' : conversationHistory.length < 2 ? 'Continue asking questions - you need at least 2 total.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have enough context (minimum 2 questions asked).'}`;
 
     const messages = [
       { role: "system" as const, content: systemPrompt },

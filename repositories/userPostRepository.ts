@@ -10,11 +10,10 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserPost, PostStatus } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { serviceClient } from "@/lib/supabase/service";
 
 interface CreatePostInput {
   userId: string;
-  title?: string;
   rawText?: string;
   status?: PostStatus;
 }
@@ -113,10 +112,6 @@ export class UserPostRepository {
       raw_text: input.rawText ?? "",
     };
 
-    if (typeof input.title !== "undefined") {
-      payload.title = input.title;
-    }
-
     if (typeof input.status !== "undefined") {
       payload.status = input.status;
     }
@@ -181,5 +176,5 @@ export class UserPostRepository {
   }
 }
 
-// Singleton instance
-export const userPostRepository = new UserPostRepository(createClient());
+// Singleton instance with service role client (bypasses RLS)
+export const userPostRepository = new UserPostRepository(serviceClient);

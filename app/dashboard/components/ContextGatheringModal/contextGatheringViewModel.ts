@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { aiClient } from "@/services/aiClient";
-import { userProfileService } from "@/services/userProfileService";
 import { useAuth } from "@/hooks";
 import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
 import { getSpeechRecognition } from "@/types";
@@ -188,7 +187,11 @@ export function useContextGatheringViewModel(postContent: string) {
       if (!user) return;
 
       try {
-        const data = await userProfileService.loadPersonalInfo(user.id);
+        const res = await fetch(`/api/user-data/personal_info?user_id=${user.id}`);
+        if (!res.ok) {
+          throw new Error('Failed to load personal info');
+        }
+        const { data } = await res.json();
 
         if (data) {
           setProfileData(data);
