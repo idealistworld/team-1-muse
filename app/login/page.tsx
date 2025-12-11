@@ -32,9 +32,8 @@ export default function Login() {
       setLoading(false);
     } else {
       toast.success("Successfully signed in!");
-      // Refresh to sync auth state with middleware, then redirect
-      router.refresh();
-      router.push("/dashboard/create");
+      // Hard redirect to ensure server-side auth sync with middleware
+      window.location.href = "/dashboard/create";
     }
   }
 
