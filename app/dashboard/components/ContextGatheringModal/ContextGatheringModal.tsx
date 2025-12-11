@@ -3,8 +3,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useContextGatheringViewModel } from "./contextGatheringViewModel";
-import { CircularCountdown } from "../shared/CircularCountdown";
-import { Sparkles, Mic, MicOff, Send, Check } from "lucide-react";
+import { Sparkles, Send, Check } from "lucide-react";
 
 interface ContextGatheringModalProps {
   isOpen: boolean;
@@ -101,30 +100,6 @@ export function ContextGatheringModal({
           {/* Questioning Step */}
           {vm.modalStep === "questioning" && (
             <div className="space-y-5">
-              {/* Voice Mode Toggle */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Voice Mode</p>
-                  <p className="text-xs text-gray-400">Speak your answers</p>
-                </div>
-                <button
-                  onClick={vm.toggleVoiceMode}
-                  className={cn(
-                    "relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 cursor-pointer",
-                    vm.isVoiceMode
-                      ? "bg-gray-900"
-                      : "bg-gray-200"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300",
-                      vm.isVoiceMode ? "translate-x-6" : "translate-x-1"
-                    )}
-                  />
-                </button>
-              </div>
-
               {/* Conversation */}
               <div className="space-y-4">
                 <div className="space-y-3 max-h-[280px] overflow-y-auto p-1">
@@ -159,30 +134,11 @@ export function ContextGatheringModal({
                   vm.conversationHistory[vm.conversationHistory.length - 1]?.role === "assistant" && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-gray-700">Your answer</label>
-                          {vm.silenceCountdown !== null && (
-                            <CircularCountdown countdown={vm.silenceCountdown} maxTime={1.5} />
-                          )}
-                        </div>
-                        {vm.isVoiceMode && (
-                          <button
-                            onClick={vm.isListening ? vm.stopListening : vm.startListening}
-                            disabled={vm.isAskingQuestion}
-                            className={cn(
-                              "p-2.5 rounded-xl transition-all duration-300 cursor-pointer",
-                              vm.isListening
-                                ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/25"
-                                : "bg-gray-900 text-white hover:bg-gray-800"
-                            )}
-                          >
-                            {vm.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                          </button>
-                        )}
+                        <label className="text-sm font-medium text-gray-700">Your answer</label>
                       </div>
                       <textarea
-                        placeholder={vm.isVoiceMode ? "Click the mic to speak..." : "Type your answer..."}
-                        value={vm.isListening ? "Listening..." : vm.currentAnswer}
+                        placeholder="Type your answer..."
+                        value={vm.currentAnswer}
                         onChange={(e) => vm.setCurrentAnswer(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
@@ -190,7 +146,7 @@ export function ContextGatheringModal({
                             vm.handleSubmitAnswer();
                           }
                         }}
-                        disabled={vm.isListening || vm.isAskingQuestion}
+                        disabled={vm.isAskingQuestion}
                         className="w-full min-h-[80px] text-sm text-gray-700 bg-gray-50 border-0 rounded-xl p-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white leading-relaxed disabled:opacity-50 placeholder:text-gray-400 transition-all"
                       />
                       <div className="flex gap-3">

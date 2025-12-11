@@ -63,23 +63,22 @@ CRITICAL: Identify every specific data point in the original post and get the us
 - Personal stories/anecdotes (get THEIR equivalent experience)
 - Industry-specific details
 
-DO NOT ask about information we already have. Focus on what's missing and what's needed for this specific post.
+DO NOT ask about information we already have. Focus ONLY on what's missing and what's needed for this specific post.
 
 Rules:
-1. ALWAYS ask ONE specific, relevant question at a time
-2. Base follow-up questions on their previous answers
-3. You MUST ask at least 1-2 questions, even if we have profile data (post-specific context is important)
-4. After 2-4 questions total, respond with ONLY: "READY_TO_GENERATE"
-5. Focus on post-specific details that aren't in the profile (stories, examples, metrics)
+1. If we already have all the basic info needed (name, company, title, industry), respond with ONLY: "READY_TO_GENERATE"
+2. If important context is missing, ask ONE specific, relevant question at a time
+3. Base follow-up questions on their previous answers
+4. After getting critical missing info OR after 3-4 questions, respond with ONLY: "READY_TO_GENERATE"
+5. Only ask about post-specific details (stories, examples, metrics) if they're critical and not already covered
 6. Make questions conversational and natural
 
 Post to personalize:
 ${postContent}
 
 Current conversation length: ${conversationHistory.length} messages
-${existingDataSection ? `\nWe have profile data, but you MUST still ask 1-2 questions about post-specific details.` : ''}
 
-${conversationHistory.length === 0 ? 'START by asking your first question about post-specific context (stories, examples, metrics, experiences).' : conversationHistory.length < 2 ? 'Continue asking questions - you need at least 2 total.' : 'Ask your next question or respond with ONLY "READY_TO_GENERATE" if you have enough context (minimum 2 questions asked).'}`;
+${conversationHistory.length === 0 ? 'If we have sufficient profile data for this post, respond with ONLY "READY_TO_GENERATE". Otherwise, ask your first question about critical missing context.' : 'Ask your next question about critical missing info, or respond with ONLY "READY_TO_GENERATE" if you have enough context.'}`;
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
