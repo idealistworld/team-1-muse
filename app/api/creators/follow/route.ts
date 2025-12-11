@@ -1,5 +1,6 @@
 import { authenticateRequest } from "@/lib/api/route-auth";
 import { creatorService } from "@/services/creatorService";
+import { logger } from "@/lib/logger";
 
 interface FollowRequestBody {
   creatorId?: number;
@@ -20,14 +21,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await creatorService.followCreator(
-      auth.supabase,
-      auth.user.id,
-      creatorId
-    );
+    const result = await creatorService.followCreator(auth.user.id, creatorId);
     return Response.json(result, { status: 200 });
   } catch (error) {
-    console.error("Follow creator error:", error);
+    logger.error("Follow creator error", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return Response.json({ error: errorMessage }, { status: 500 });
   }

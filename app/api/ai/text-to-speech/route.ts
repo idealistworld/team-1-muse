@@ -1,5 +1,6 @@
 import { authenticateRequest } from "@/lib/api/route-auth";
 import { openaiService } from "@/services/openaiService";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   const auth = await authenticateRequest(request);
@@ -11,8 +12,20 @@ export async function POST(request: Request) {
   try {
     const { text, voice = "alloy" } = await request.json();
 
-    if (!text) {
-      return Response.json({ error: "Text is required" }, { status: 400 });
+    // Validate text
+    if (!text || typeof text !== "string") {
+      return Response.json({ error: "Text is required and must be a string" }, { status: 400 });
+    }
+
+    // Limit text length (OpenAI TTS has max ~4096 chars)
+    if (text.length > 4096) {
+      return Response.json({ error: "Text exceeds maximum length of 4,096 characters" }, { status: 400 });
+    }
+
+    // Validate voice parameter
+    const validVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+    if (voice && !validVoices.includes(voice)) {
+      return Response.json({ error: `Invalid voice. Must be one of: ${validVoices.join(", ")}` }, { status: 400 });
     }
 
     const buffer = await openaiService.generateSpeech(text, voice);
@@ -28,7 +41,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Text-to-speech error:", error);
+    logger.error("Text-to-speech error", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return Response.json(
       { error: "Failed to generate speech", details: errorMessage },

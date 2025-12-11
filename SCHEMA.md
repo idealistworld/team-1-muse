@@ -55,6 +55,7 @@
 |--------|------|----------|---------|-------------|
 | post_id | uuid | NO | gen_random_uuid() | PRIMARY KEY |
 | user_id | uuid | NO | - | FK → user_profiles(user_id) |
+| title | text | YES | - | Post title (indexed) |
 | raw_text | text | YES | - | |
 | created_at | timestamptz | NO | now() | |
 | updated_at | timestamptz | NO | now() | |

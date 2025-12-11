@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { personalInfoCategories } from "./personalInfoDataPoints";
 import { ChevronDown, ChevronRight, Mic, Check, RotateCcw, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -52,7 +52,7 @@ export default function PersonalInfoPage() {
   }, [isSaving, hasUnsavedChanges]);
 
   // Get all fields in order
-  const getAllFields = () => {
+  const getAllFields = useCallback(() => {
     const fields: string[] = [];
     personalInfoCategories.forEach(cat => {
       cat.dataPoints.forEach(dp => {
@@ -60,7 +60,7 @@ export default function PersonalInfoPage() {
       });
     });
     return fields;
-  };
+  }, []);
 
   // Start audio analysis for visualization
   const startAudioAnalysis = async (stream: MediaStream) => {
@@ -98,7 +98,7 @@ export default function PersonalInfoPage() {
 
       updateLevels();
     } catch (error) {
-      console.error("Failed to start audio analysis:", error);
+      // Audio analysis failed - non-critical feature
     }
   };
 
@@ -156,7 +156,7 @@ export default function PersonalInfoPage() {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech recognition error:", event.error, event);
+      // Speech recognition error - UI state already updated
       isRecognitionRunningRef.current = false;
       isStartingRef.current = false;
       setIsListening(false);
@@ -202,7 +202,7 @@ export default function PersonalInfoPage() {
         animationFrameRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Functions use closure to access latest values - this effect intentionally only runs when activeField or isVoiceMode changes
   }, [activeField, isVoiceMode]);
 
   const handleInputChange = (fieldId: string, value: string) => {
@@ -210,13 +210,10 @@ export default function PersonalInfoPage() {
   };
 
   const parseAndExtractValue = async (transcript: string, fieldLabel: string, fieldId: string) => {
-    console.log('🎤 Raw transcript:', transcript);
-    console.log('📋 Field label:', fieldLabel);
     setIsProcessing(true);
     try {
       // Use AI to extract the actual value from natural language
       const extractedValue = await extractionClient.extractFieldValue(transcript, fieldLabel);
-      console.log('✅ Extracted value:', extractedValue);
 
       updateField(fieldId, extractedValue || transcript);
 
@@ -224,7 +221,6 @@ export default function PersonalInfoPage() {
       setIsProcessing(false);
       moveToNextField();
     } catch (error) {
-      console.error("❌ Failed to parse value:", error);
       // Fallback to raw transcript
       updateField(fieldId, transcript);
       setIsProcessing(false);
@@ -296,7 +292,7 @@ export default function PersonalInfoPage() {
         // Start audio analysis for visualization
         startAudioAnalysis(stream);
       } catch (permError) {
-        console.error("Microphone permission error:", permError);
+        // Error is shown to user via toast
         toast.error("Could not access microphone. Please grant permission.");
         setIsVoiceMode(false);
         return;
@@ -322,7 +318,7 @@ export default function PersonalInfoPage() {
         recognitionRef.current.start();
         toast.info("Listening... Speak now!");
       } catch (error) {
-        console.error("Failed to start recognition:", error);
+        // Error is shown to user via toast
         isStartingRef.current = false;
         setIsListening(false);
 
@@ -334,7 +330,7 @@ export default function PersonalInfoPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to prepare recognition:", error);
+      // Error is shown to user via toast
       isStartingRef.current = false;
       setIsListening(false);
       toast.error("Failed to initialize voice input. Please try again.");
@@ -425,7 +421,7 @@ export default function PersonalInfoPage() {
         mediaStreamRef.current = null;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Functions use closure to access latest values - this effect intentionally only runs when isVoiceMode changes
   }, [isVoiceMode]);
 
   const toggleCategory = (categoryId: string) => {

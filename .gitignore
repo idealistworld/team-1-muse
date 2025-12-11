@@ -24,6 +24,17 @@
 .DS_Store
 *.pem
 
+# Claude artifacts
+claude.md
+CLAUDE.md.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # debug
 npm-debug.log*
 yarn-debug.log*

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { aiClient } from "@/services/aiClient";
 import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
@@ -143,7 +143,7 @@ export function useSuggestedEditsViewModel(
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech recognition error:", event.error, event);
+      // Speech recognition error - UI state already updated
       isRecognitionRunningRef.current = false;
       isStartingRef.current = false;
       setIsListening(false);
@@ -230,7 +230,7 @@ export function useSuggestedEditsViewModel(
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (permError) {
-        console.error("Microphone permission error:", permError);
+        // Error is shown to user via toast
         toast.error("Could not access microphone. Please grant permission.");
         setIsVoiceMode(false);
         return;
@@ -266,7 +266,7 @@ export function useSuggestedEditsViewModel(
         recognitionRef.current.start();
         toast.info("Listening... Speak now!");
       } catch (error) {
-        console.error("Failed to start recognition:", error);
+        // Error is shown to user via toast
         isStartingRef.current = false;
         setIsListening(false);
 
@@ -278,7 +278,7 @@ export function useSuggestedEditsViewModel(
         }
       }
     } catch (error) {
-      console.error("Failed to prepare recognition:", error);
+      // Error is shown to user via toast
       isStartingRef.current = false;
       setIsListening(false);
       toast.error("Failed to initialize voice input. Please try again.");
@@ -292,7 +292,7 @@ export function useSuggestedEditsViewModel(
     setIsListening(false);
   };
 
-  const generateEdit = async () => {
+  const generateEdit = useCallback(async () => {
     if (!inputText.trim() || !feedbackText.trim()) return;
 
     setIsGenerating(true);
@@ -328,7 +328,7 @@ export function useSuggestedEditsViewModel(
       setFeedbackText(""); // Clear feedback for next iteration
       toast.success("Content edited!");
     } catch (error) {
-      console.error("Generate edit error:", error);
+      // Error is shown to user via toast
       toast.error(
         `Failed to generate edits: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -337,7 +337,7 @@ export function useSuggestedEditsViewModel(
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [inputText, feedbackText, conversationHistory, userContext]);
 
   // Auto-generate after voice input
   useEffect(() => {
@@ -347,8 +347,7 @@ export function useSuggestedEditsViewModel(
         generateEdit();
       }, 500);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldAutoGenerate, feedbackText, inputText]);
+  }, [shouldAutoGenerate, feedbackText, inputText, generateEdit]);
 
   const playTextToSpeech = async (text: string) => {
     try {
@@ -375,7 +374,7 @@ export function useSuggestedEditsViewModel(
 
       await audio.play();
     } catch (error) {
-      console.error("Text-to-speech error:", error);
+      // Error is shown to user via toast
       toast.error("Failed to play audio");
       setIsPlaying(false);
     }

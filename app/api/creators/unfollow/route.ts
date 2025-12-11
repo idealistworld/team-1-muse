@@ -1,5 +1,6 @@
 import { authenticateRequest } from "@/lib/api/route-auth";
 import { creatorService } from "@/services/creatorService";
+import { logger } from "@/lib/logger";
 
 interface UnfollowRequestBody {
   creatorId?: number;
@@ -20,14 +21,10 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const result = await creatorService.unfollowCreator(
-      auth.supabase,
-      auth.user.id,
-      creatorId
-    );
+    const result = await creatorService.unfollowCreator(auth.user.id, creatorId);
     return Response.json(result, { status: 200 });
   } catch (error) {
-    console.error("Unfollow creator error:", error);
+    logger.error("Unfollow creator error", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return Response.json({ error: errorMessage }, { status: 500 });
   }

@@ -3,9 +3,10 @@
  */
 
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_SECRET_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY!;
 
 type AuthSuccess = {
   supabase: SupabaseClient;
@@ -58,7 +59,7 @@ export function extractAccessToken(request: Request): string | undefined {
         const tokenData = JSON.parse(decodedValue);
         return tokenData.access_token;
       } catch (e) {
-        console.error("Failed to parse auth token from cookie:", e);
+        logger.error("Failed to parse auth token from cookie", e);
       }
     }
   }
@@ -79,7 +80,7 @@ export async function authenticateRequest(
     return { error: "Missing access token", status: 401 };
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createClient(supabaseUrl, supabaseSecretKey, {
     global: {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -109,5 +110,5 @@ export async function authenticateRequest(
  * For use in App Router Route Handlers
  */
 export function createUnauthenticatedClient(): SupabaseClient {
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseSecretKey);
 }

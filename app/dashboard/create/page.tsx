@@ -8,6 +8,7 @@ import { useContentEditorViewModel } from "./contentEditorViewModel";
 import { EditHistory } from "../components/EditHistory/EditHistory";
 import { PostViewModal } from "../components/PostViewModal";
 import { useSuggestedEditsViewModel } from "../components/SuggestedEditsCard/suggestedEditsViewModel";
+import { logger } from "@/lib/logger";
 import { ContextGatheringModal } from "../components/ContextGatheringModal/ContextGatheringModal";
 import { ChoiceModal } from "../components/ChoiceModal/ChoiceModal";
 import { ContentEditorCard } from "./components/ContentEditorCard";
@@ -83,21 +84,19 @@ function CreatePostPageContent() {
           toast.error("Draft not found");
           return;
         }
-        const title = await userPostService.fetchPostTitle(draftId, user.id);
         setUserContent(post.rawText ?? "");
         setEditingPostId(post.postId);
-        setEditingTitle(title ?? "");
+        setEditingTitle(post.title ?? "");
         toast.success("Draft loaded from Notebook");
         router.replace("/dashboard/create");
       } catch (error) {
-        console.error(error);
+        // Error is handled by catch block
         toast.error(error instanceof Error ? error.message : "Failed to load draft");
       }
     }
 
     loadDraft();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, user?.id]);
+  }, [draftId, user?.id, router]);
 
   function handleExpandPost(post: ContentPost) {
     setExpandedPost(post);
@@ -127,20 +126,22 @@ function CreatePostPageContent() {
     setIsSnapshotSaving(true);
     try {
       if (editingPostId) {
-        await userPostService.updatePost(editingPostId, { rawText: userContent });
-        await userPostService.savePostTitle(editingPostId, user.id, snapshotTitle);
+        await userPostService.updatePost(editingPostId, {
+          rawText: userContent,
+          title: snapshotTitle
+        });
         toast.success("Snapshot updated");
       } else {
         const newPost = await userPostService.createPost(user.id, {
           rawText: userContent,
+          title: snapshotTitle,
         });
-        await userPostService.savePostTitle(newPost.postId, user.id, snapshotTitle);
         setEditingPostId(newPost.postId);
         toast.success("Snapshot saved to Notebook");
       }
       setEditingTitle(snapshotTitle);
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save snapshot", error);
       toast.error(error instanceof Error ? error.message : "Failed to save snapshot");
     } finally {
       setIsSnapshotSaving(false);

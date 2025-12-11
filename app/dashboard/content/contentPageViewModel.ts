@@ -21,6 +21,7 @@ const POSTS_PER_PAGE = 20;
 export interface ContentPageViewModel {
   // Data
   allPosts: ContentPost[];
+  filteredPosts: ContentPost[];
   visiblePosts: ContentPost[];
   creators: Profile[];
 
@@ -109,7 +110,7 @@ export function useContentPageViewModel(userId?: string): ContentPageViewModel {
       setAllPosts(postsData);
       setCreators(creatorsData);
     } catch (err) {
-      console.error("Failed to load data:", err);
+      // Error is already shown to user via setError
       setError("Failed to load content");
     } finally {
       setIsLoading(false);
@@ -183,6 +184,7 @@ export function useContentPageViewModel(userId?: string): ContentPageViewModel {
 
   return {
     allPosts,
+    filteredPosts: sortedPosts,
     visiblePosts,
     creators,
     isLoading,

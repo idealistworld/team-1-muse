@@ -1,5 +1,6 @@
 import { authenticateRequest } from "@/lib/api/route-auth";
 import { creatorService } from "@/services/creatorService";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/creators/get-followed-creators
@@ -23,10 +24,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const creators = await creatorService.getFollowedCreatorsWithProfiles(auth.supabase, user_id);
+    const creators = await creatorService.getFollowedCreatorsWithProfiles(user_id);
     return Response.json({ data: creators }, { status: 200 });
   } catch (error) {
-    console.error("Get followed creators error:", error);
+    logger.error("Get followed creators error", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return Response.json({ error: errorMessage }, { status: 500 });
   }

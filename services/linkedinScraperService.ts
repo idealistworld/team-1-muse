@@ -1,8 +1,17 @@
 /**
- * Service for scraping LinkedIn profiles using Apify
+ * LinkedInScraperService - Business logic for LinkedIn profile scraping
+ *
+ * Responsibilities:
+ * - Orchestrate Apify API calls
+ * - Business rules for scraping and saving posts
+ * - Use repositories for database operations
+ * - NO direct database queries
  */
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import { CreatorRepository, creatorRepository } from "@/repositories/creatorRepository";
+import { ContentRepository, contentRepository } from "@/repositories/contentRepository";
+import { UserFollowRepository, userFollowRepository } from "@/repositories/userFollowRepository";
+import { logger } from "@/lib/logger";
 
 const APIFY_ACTOR_ID = "apimaestro~linkedin-profile-posts";
 
@@ -55,8 +64,10 @@ export interface LinkedInScraperService {
 
 class LinkedInScraperServiceImpl implements LinkedInScraperService {
   constructor(
-    private supabase: SupabaseClient,
-    private apifyToken: string
+    private apifyToken: string,
+    private creatorRepo: CreatorRepository,
+    private contentRepo: ContentRepository,
+    private followRepo: UserFollowRepository
   ) {}
 
   /**
@@ -116,12 +127,12 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
       const responseText = await runResponse.text();
 
       if (!runResponse.ok) {
-        console.error(`Apify error for ${username}:`, responseText.slice(0, 500));
+        logger.error(`Apify error for ${username}`, null, { responseText: responseText.slice(0, 500) });
         continue;
       }
 
       if (!responseText || responseText.trim() === "") {
-        console.error(`Empty response for ${username}`);
+        logger.error(`Empty response for ${username}`, null);
         continue;
       }
 
@@ -129,8 +140,8 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
         const results = JSON.parse(responseText);
         const posts = this.extractPostsFromResponse(results);
         allPosts.push(...posts);
-      } catch {
-        console.error(`Invalid JSON response for ${username}`);
+      } catch (error) {
+        logger.error(`Invalid JSON response for ${username}`, error);
       }
     }
 
@@ -140,22 +151,35 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
   /**
    * Extract posts from Apify response (handles multiple response formats)
    */
-  private extractPostsFromResponse(results: any): ApiMaestroPost[] {
+  private extractPostsFromResponse(results: unknown): ApiMaestroPost[] {
+    // Type guard helpers
+    const isArrayWithSuccess = (val: unknown): val is Array<{ success: boolean; data: { posts: ApiMaestroPost[] } }> => {
+      return Array.isArray(val) && val[0]?.success && val[0]?.data?.posts;
+    };
+
+    const isArrayOfPosts = (val: unknown): val is ApiMaestroPost[] => {
+      return Array.isArray(val) && (val[0]?.urn || val[0]?.text);
+    };
+
+    const isObjectWithSuccess = (val: unknown): val is { success: boolean; data: { posts: ApiMaestroPost[] } } => {
+      return typeof val === 'object' && val !== null && 'success' in val && 'data' in val;
+    };
+
     // Handle wrapped response format: [{ success, data: { posts } }]
-    if (results[0]?.success && results[0]?.data?.posts) {
+    if (isArrayWithSuccess(results)) {
       return results[0].data.posts;
     }
     // Handle direct posts format: [{ urn, text, ... }, ...]
-    else if (results[0]?.urn || results[0]?.text) {
+    else if (isArrayOfPosts(results)) {
       return results;
     }
     // Handle single response object (not array): { success, data: { posts } }
-    else if (results?.success && results?.data?.posts) {
+    else if (isObjectWithSuccess(results)) {
       return results.data.posts;
     }
     // Unexpected format
     else {
-      console.error("Unexpected Apify response format");
+      logger.error("Unexpected Apify response format", null, { results });
       return [];
     }
   }
@@ -197,34 +221,28 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
       return null;
     }
 
-    // Try to find existing creator
-    const { data: existingCreator } = await this.supabase
-      .from("creator_profiles")
-      .select("creator_id")
-      .eq("profile_url", cleanProfileUrl)
-      .single();
+    // Try to find existing creator by profile URL
+    const existingCreator = await this.creatorRepo.findByProfileUrl(cleanProfileUrl);
 
     if (existingCreator) {
       return existingCreator.creator_id;
     }
 
     // Create new creator
-    const { data: newCreator, error: createError } = await this.supabase
-      .from("creator_profiles")
-      .insert({
+    try {
+      const newCreator = await this.creatorRepo.create({
+        profileUrl: cleanProfileUrl,
+        displayName: authorName,
+        platform: "linkedin",
+      });
+      return newCreator.creator_id;
+    } catch (error) {
+      logger.error("Failed to create creator", error, {
         profile_url: cleanProfileUrl,
         display_name: authorName,
-        platform: "linkedin",
-      })
-      .select("creator_id")
-      .single();
-
-    if (createError || !newCreator) {
-      console.error("Failed to create creator:", createError);
+      });
       return null;
     }
-
-    return newCreator.creator_id;
   }
 
   /**
@@ -235,18 +253,10 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
     if (!postUrl) return;
 
     // Check if post already exists
-    const { data: existingPost } = await this.supabase
-      .from("creator_content")
-      .select("content_id")
-      .eq("post_url", postUrl)
-      .single();
+    const existingPost = await this.contentRepo.findByPostUrl(postUrl);
 
     if (!existingPost) {
-      await this.supabase.from("creator_content").insert({
-        creator_id: creatorId,
-        post_url: postUrl,
-        post_raw: JSON.stringify(post),
-      });
+      await this.contentRepo.create(creatorId, postUrl, JSON.stringify(post));
     }
   }
 
@@ -255,30 +265,25 @@ class LinkedInScraperServiceImpl implements LinkedInScraperService {
    */
   private async autoFollowCreators(creatorIds: number[], userId: string): Promise<void> {
     for (const creatorId of creatorIds) {
-      // Check if already following
-      const { data: existingFollow } = await this.supabase
-        .from("user_creator_follows")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("creator_id", creatorId)
-        .single();
-
-      if (!existingFollow) {
-        await this.supabase.from("user_creator_follows").insert({
-          user_id: userId,
-          creator_id: creatorId,
-        });
+      try {
+        // Use repository's upsert method - it handles duplicates automatically
+        await this.followRepo.upsert(userId, creatorId);
+      } catch (error) {
+        logger.error("Failed to auto-follow creator", error, { userId, creatorId });
       }
     }
   }
 }
 
-/**
- * Factory function to create LinkedInScraperService
- */
-export function createLinkedInScraperService(
-  supabase: SupabaseClient,
-  apifyToken: string
-): LinkedInScraperService {
-  return new LinkedInScraperServiceImpl(supabase, apifyToken);
+// Singleton instance with injected repositories
+const apifyToken = process.env.APIFY_API_TOKEN;
+if (!apifyToken) {
+  throw new Error("APIFY_API_TOKEN is not configured");
 }
+
+export const linkedInScraperService = new LinkedInScraperServiceImpl(
+  apifyToken,
+  creatorRepository,
+  contentRepository,
+  userFollowRepository
+);

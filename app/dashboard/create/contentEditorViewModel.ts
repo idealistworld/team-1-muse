@@ -88,7 +88,6 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
 
       setUserContent(data.suggestedText || "");
     } catch (error) {
-      console.error("Failed to generate initial content:", error);
       // Fallback: show original content if AI generation fails
       const combinedContent = highlightedPosts
         .map((post) => post.postRaw || "")
@@ -115,7 +114,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
 
       setUserContent(data.suggestedText || "");
     } catch (error) {
-      console.error("Failed to generate initial content:", error);
+      // Fallback to original content if AI generation fails
       const combinedContent = highlightedPosts
         .map((post) => post.postRaw || "")
         .join("\n\n");
@@ -163,7 +162,7 @@ export function useContentEditorViewModel(highlightedPosts: ContentPost[]) {
 
       setUserContent(data.suggestedText || "");
     } catch (error) {
-      console.error("Failed to generate initial content:", error);
+      // Fallback to original content if AI generation fails
       const combinedContent = highlightedPosts
         .map((post) => post.postRaw || "")
         .join("\n\n");

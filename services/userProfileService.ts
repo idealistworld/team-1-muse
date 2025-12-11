@@ -1,10 +1,17 @@
 /**
- * Service for managing user profile and personal information
+ * UserProfileService - Business logic for user profiles
+ *
+ * Responsibilities:
+ * - Business rules for personal information
+ * - Orchestrates repository calls
+ * - NO direct database queries
  */
 
-import { SupabaseClient } from "@supabase/supabase-js";
+import { UserDataRepository, userDataRepository } from "@/repositories/userDataRepository";
 
 export type PersonalInfoData = Record<string, string>;
+
+const PERSONAL_INFO_KEY = "personal_info";
 
 export interface UserProfileService {
   loadPersonalInfo(userId: string): Promise<PersonalInfoData>;
@@ -12,57 +19,29 @@ export interface UserProfileService {
 }
 
 class UserProfileServiceImpl implements UserProfileService {
-  constructor(private supabase: SupabaseClient) {}
+  constructor(private userDataRepo: UserDataRepository) {}
 
   /**
    * Load personal info data for a user
    */
   async loadPersonalInfo(userId: string): Promise<PersonalInfoData> {
-    const { data, error } = await this.supabase
-      .from("user_data")
-      .select("data")
-      .eq("user_id", userId)
-      .eq("key", "personal_info")
-      .single();
+    const data = await this.userDataRepo.findByUserIdAndKey(userId, PERSONAL_INFO_KEY);
 
-    if (error) {
-      // If no data exists yet, return empty object
-      if (error.code === "PGRST116") {
-        return {};
-      }
-      throw new Error(`Failed to load personal info: ${error.message}`);
+    // If no data exists yet, return empty object
+    if (!data) {
+      return {};
     }
 
-    return (data?.data as PersonalInfoData) || {};
+    return (data as PersonalInfoData) || {};
   }
 
   /**
    * Save personal info data for a user
    */
   async savePersonalInfo(userId: string, data: PersonalInfoData): Promise<void> {
-    const { error } = await this.supabase
-      .from("user_data")
-      .upsert(
-        {
-          user_id: userId,
-          key: "personal_info",
-          data: data,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,key",
-        }
-      );
-
-    if (error) {
-      throw new Error(`Failed to save personal info: ${error.message}`);
-    }
+    await this.userDataRepo.upsert(userId, PERSONAL_INFO_KEY, data);
   }
 }
 
-/**
- * Factory function to create a UserProfileService instance
- */
-export function createUserProfileService(supabase: SupabaseClient): UserProfileService {
-  return new UserProfileServiceImpl(supabase);
-}
+// Singleton instance with injected repository
+export const userProfileService = new UserProfileServiceImpl(userDataRepository);

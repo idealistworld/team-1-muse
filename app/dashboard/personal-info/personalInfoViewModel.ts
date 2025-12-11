@@ -3,8 +3,8 @@
  * Handles business logic and state management for user profile data
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { createUserProfileService, PersonalInfoData } from "@/services/userProfileService";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { userProfileService, PersonalInfoData } from "@/services/userProfileService";
 import { useAuth } from "@/hooks";
 
 export interface PersonalInfoViewModel {
@@ -22,13 +22,12 @@ export interface PersonalInfoViewModel {
 }
 
 export function usePersonalInfoViewModel(): PersonalInfoViewModel {
-  const { user, supabase } = useAuth();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<PersonalInfoData>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const userProfileService = useMemo(() => createUserProfileService(supabase), [supabase]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<string>("");
   const hasInitiallyLoadedRef = useRef(false);
@@ -47,7 +46,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
         lastSavedDataRef.current = JSON.stringify(data);
         setHasUnsavedChanges(false);
       } catch (error) {
-        console.error("Failed to load personal info:", error);
+        // Error is re-thrown to be handled by caller
         throw error;
       } finally {
         setIsLoading(false);
@@ -59,7 +58,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
     }
 
     loadData();
-  }, [user, userProfileService]);
+  }, [user]);
 
   // Auto-save with debouncing
   useEffect(() => {
@@ -89,7 +88,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
           lastSavedDataRef.current = dataStr;
           setHasUnsavedChanges(false);
         } catch (error) {
-          console.error("Failed to save personal info:", error);
+          // Error is re-thrown to be handled by caller
           throw error;
         } finally {
           setIsSaving(false);
@@ -102,7 +101,7 @@ export function usePersonalInfoViewModel(): PersonalInfoViewModel {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formData, isLoading, user, userProfileService]);
+  }, [formData, isLoading, user]);
 
   const updateField = useCallback((fieldId: string, value: string) => {
     setFormData((prev) => ({

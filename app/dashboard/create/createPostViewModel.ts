@@ -47,7 +47,7 @@ export function useCreatePostViewModel() {
       } catch (error) {
         if (isMounted) {
           toast.error("Failed to load content. Please try again.");
-          console.error("Error fetching data:", error);
+          // Error is already shown to user via toast
         }
       }
     }

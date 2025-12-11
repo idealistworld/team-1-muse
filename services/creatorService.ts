@@ -1,18 +1,22 @@
 /**
- * Server-side Creator Service
- * Handles database operations for creator follow/unfollow
+ * CreatorService - Business logic for creator operations
+ *
+ * Responsibilities:
+ * - Business rules for following/unfollowing creators
+ * - Orchestrates repository calls
+ * - NO direct database queries
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreatorProfile } from "@/types";
-
-interface UserFollowWithProfile {
-  creator_id: number;
-  created_at: string;
-  creator_profiles: CreatorProfile;
-}
+import { CreatorRepository, creatorRepository } from "@/repositories/creatorRepository";
+import { UserFollowRepository, userFollowRepository } from "@/repositories/userFollowRepository";
 
 export class CreatorService {
+  constructor(
+    private creatorRepo: CreatorRepository,
+    private followRepo: UserFollowRepository
+  ) {}
+
   /**
    * Follow a creator
    * Uses upsert to handle both INSERT and UPDATE cases:
@@ -20,47 +24,16 @@ export class CreatorService {
    * - If follow already exists: updates the record (UPDATE)
    * This implements the "U" in CRUD operations
    */
-  async followCreator(
-    supabase: SupabaseClient,
-    userId: string,
-    creatorId: number
-  ) {
-    const { data, error } = await supabase
-      .from("user_follows")
-      .upsert(
-        {
-          user_id: userId,
-          creator_id: creatorId,
-        },
-        { onConflict: "user_id,creator_id" }
-      )
-      .select("user_id, creator_id, created_at")
-      .single();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
+  async followCreator(userId: string, creatorId: number) {
+    const data = await this.followRepo.upsert(userId, creatorId);
     return { data, isFollowed: true };
   }
 
   /**
    * Unfollow a creator
    */
-  async unfollowCreator(
-    supabase: SupabaseClient,
-    userId: string,
-    creatorId: number
-  ) {
-    const { error } = await supabase
-      .from("user_follows")
-      .delete()
-      .match({ user_id: userId, creator_id: creatorId });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
+  async unfollowCreator(userId: string, creatorId: number) {
+    await this.followRepo.delete(userId, creatorId);
     return {
       data: { user_id: userId, creator_id: creatorId },
       isFollowed: false,
@@ -70,58 +43,25 @@ export class CreatorService {
   /**
    * Get all creators a user is following (with creator profile data)
    */
-  async getFollowedCreatorsWithProfiles(supabase: SupabaseClient, userId: string) {
-    const { data, error } = await supabase
-      .from("user_follows")
-      .select(`
-        creator_id,
-        created_at,
-        creator_profiles (*)
-      `)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    // Extract the creator_profiles from the joined data
-    return (
-      data?.map((follow) => follow.creator_profiles as unknown as CreatorProfile) || []
-    );
+  async getFollowedCreatorsWithProfiles(userId: string) {
+    return this.followRepo.findByUserIdWithProfiles(userId);
   }
 
   /**
    * Get all creators a user is following (just IDs)
    */
-  async getFollowedCreators(supabase: SupabaseClient, userId: string) {
-    const { data, error } = await supabase
-      .from("user_follows")
-      .select("creator_id")
-      .eq("user_id", userId);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+  async getFollowedCreators(userId: string) {
+    const ids = await this.followRepo.findCreatorIdsByUserId(userId);
+    return ids.map((creator_id) => ({ creator_id }));
   }
 
   /**
    * Get all creators
    */
-  async getAllCreators(supabase: SupabaseClient) {
-    const { data, error } = await supabase
-      .from("creator_profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data;
+  async getAllCreators() {
+    return this.creatorRepo.findAll();
   }
 }
 
-export const creatorService = new CreatorService();
+// Singleton instance with injected repositories
+export const creatorService = new CreatorService(creatorRepository, userFollowRepository);

@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { NotebookPen, Search, Save, Trash2, Loader2, Sparkles, Clock3, BookOpen, Pencil } from "lucide-react";
-import { userPostService } from "@/services/userPostService";
 import type { UserPost } from "@/types";
-import { toast } from "react-toastify";
 import { formatTimeAgo } from "@/lib/formatters";
+import { useNotebookViewModel } from "./notebookViewModel";
 
 function getPostTitle(post: UserPost): string {
   if (post.title) {
@@ -25,123 +22,25 @@ function getPostTitle(post: UserPost): string {
 
 export default function NotebookPage() {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
-  const [posts, setPosts] = useState<UserPost[]>([]);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [isFetching, setIsFetching] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editorValue, setEditorValue] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
 
-  const selectedPost = useMemo(
-    () => posts.find((post) => post.postId === selectedPostId) ?? null,
-    [posts, selectedPostId]
-  );
-
-  const filteredPosts = useMemo(() => {
-    if (!searchQuery.trim()) return posts;
-    const q = searchQuery.toLowerCase();
-    return posts.filter((post) => {
-      const title = getPostTitle(post).toLowerCase();
-      const body = (post.rawText || "").toLowerCase();
-      return title.includes(q) || body.includes(q);
-    });
-  }, [posts, searchQuery]);
-
-  const totalWordCount = useMemo(() => {
-    return posts.reduce((acc, post) => {
-      if (typeof post.wordCount === "number") {
-        return acc + post.wordCount;
-      }
-      const words = post.rawText?.split(/\s+/).filter(Boolean).length ?? 0;
-      return acc + words;
-    }, 0);
-  }, [posts]);
-
-  const isDirty = selectedPost ? editorValue !== (selectedPost.rawText ?? "") : false;
-
-  useEffect(() => {
-    if (!user?.id) return;
-    setIsFetching(true);
-    Promise.all([
-      userPostService.fetchUserPosts(user.id),
-      userPostService.fetchPostTitles(user.id),
-    ])
-      .then(([postData, titleMap]) => {
-        const merged = postData.map((post) => ({
-          ...post,
-          title: titleMap[post.postId] ?? post.title,
-        }));
-        setPosts(merged);
-        if (merged.length > 0) {
-          setSelectedPostId((prev) => prev ?? merged[0].postId);
-        } else {
-          setSelectedPostId(null);
-          setEditorValue("");
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-        toast.error("Failed to load notebook");
-      })
-      .finally(() => setIsFetching(false));
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (selectedPost) {
-      setEditorValue(selectedPost.rawText ?? "");
-    } else {
-      setEditorValue("");
-    }
-  }, [selectedPost]);
-
-  async function handleSaveDraft() {
-    if (!selectedPost) return;
-    setIsSaving(true);
-    try {
-      const updated = await userPostService.updatePost(selectedPost.postId, {
-        rawText: editorValue,
-      });
-      setPosts((prev) => prev.map((post) => (post.postId === updated.postId ? updated : post)));
-      toast.success("Draft saved");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof Error ? error.message : "Failed to save draft");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleDeleteDraft(postId: string) {
-    if (!window.confirm("Delete this draft? This cannot be undone.")) {
-      return;
-    }
-    try {
-      await userPostService.deletePost(postId);
-      if (user?.id) {
-        await userPostService.deletePostTitle(postId, user.id);
-      }
-      setPosts((prev) => prev.filter((post) => post.postId !== postId));
-      if (selectedPostId === postId) {
-        setSelectedPostId(null);
-        setEditorValue("");
-      }
-      toast.success("Draft deleted");
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof Error ? error.message : "Failed to delete draft");
-    }
-  }
-
-  function handleSelect(post: UserPost) {
-    setSelectedPostId(post.postId);
-    setEditorValue(post.rawText ?? "");
-  }
-
-  function handleEditInCreate() {
-    if (!selectedPost) return;
-    router.push(`/dashboard/create?draftId=${selectedPost.postId}`);
-  }
+  // Use ViewModel for all state and business logic
+  const {
+    posts,
+    selectedPost,
+    filteredPosts,
+    isFetching,
+    isSaving,
+    editorValue,
+    searchQuery,
+    isDirty,
+    totalWordCount,
+    setSearchQuery,
+    setEditorValue,
+    handleSelect,
+    handleSaveDraft,
+    handleDeleteDraft,
+    handleEditInCreate,
+  } = useNotebookViewModel(user?.id);
 
   if (isLoading || isFetching) {
     return (
@@ -224,7 +123,7 @@ export default function NotebookPage() {
                 <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                 <Input
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search drafts..."
                   className="pl-11 bg-gray-50 border-0 text-sm"
                 />
@@ -232,7 +131,7 @@ export default function NotebookPage() {
               <div className="flex-1 overflow-y-auto pr-1 space-y-3">
                 {filteredPosts.map((post) => {
                   const title = getPostTitle(post);
-                  const isActive = post.postId === selectedPostId;
+                  const isActive = post.postId === selectedPost?.postId;
                   return (
                     <button
                       key={post.postId}
@@ -304,7 +203,7 @@ export default function NotebookPage() {
                   <div className="mt-5">
                     <Textarea
                       value={editorValue}
-                      onChange={(event) => setEditorValue(event.target.value)}
+                      onChange={(e) => setEditorValue(e.target.value)}
                       placeholder="Write, paste, or iterate on your post here..."
                       className="w-full h-full min-h-[420px] text-base bg-gray-50 border-0 focus:ring-2 focus:ring-blue-500/20"
                     />

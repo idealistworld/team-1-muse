@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { aiClient } from "@/services/aiClient";
+import { userProfileService } from "@/services/userProfileService";
 import { useAuth } from "@/hooks";
 import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/types";
 import { getSpeechRecognition } from "@/types";
+import { logger } from "@/lib/logger";
 
 interface ChatMessage {
   role: "assistant" | "user";
@@ -25,7 +27,7 @@ interface PostAnalysis {
 }
 
 export function useContextGatheringViewModel(postContent: string) {
-  const { user, supabase } = useAuth();
+  const { user } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>(
     []
   );
@@ -132,7 +134,7 @@ export function useContextGatheringViewModel(postContent: string) {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("Speech recognition error:", event.error, event);
+      // Speech recognition error - UI state already updated
       isRecognitionRunningRef.current = false;
       isStartingRef.current = false;
       setIsListening(false);
@@ -180,26 +182,21 @@ export function useContextGatheringViewModel(postContent: string) {
     };
   }, []);
 
-  // Load profile data from Supabase
+  // Load profile data from user profile service
   useEffect(() => {
     async function loadProfile() {
       if (!user) return;
 
       try {
-        const { data } = await supabase
-          .from("user_data")
-          .select("data")
-          .eq("user_id", user.id)
-          .eq("key", "personal_info")
-          .single();
+        const data = await userProfileService.loadPersonalInfo(user.id);
 
-        if (data?.data) {
-          setProfileData(data.data);
-          setEditableProfileData(data.data); // Initialize editable copy
+        if (data) {
+          setProfileData(data);
+          setEditableProfileData(data); // Initialize editable copy
 
           // Auto-check all fields that have data
           const initialChecked: Record<string, boolean> = {};
-          Object.entries(data.data).forEach(([key, value]) => {
+          Object.entries(data).forEach(([key, value]) => {
             if (value && String(value).trim()) {
               initialChecked[key] = true;
             }
@@ -212,7 +209,36 @@ export function useContextGatheringViewModel(postContent: string) {
     }
 
     loadProfile();
-  }, [user, supabase]);
+  }, [user]);
+
+  // Get checked profile data only (uses editable data)
+  const getCheckedProfileData = useCallback(() => {
+    const checked: Record<string, string> = {};
+    Object.entries(editableProfileData).forEach(([key, value]) => {
+      if (checkedProfileFields[key] && value && String(value).trim()) {
+        checked[key] = value;
+      }
+    });
+    return checked;
+  }, [editableProfileData, checkedProfileFields]);
+
+  // Apply current profile data directly (only checked fields)
+  const applyCurrentInfo = useCallback(() => {
+    // Convert CHECKED profile data to conversation format so content generation can use it
+    const contextMessages: ChatMessage[] = [];
+    const checkedData = getCheckedProfileData();
+
+    if (checkedData.fullName) contextMessages.push({ role: "user", content: `My name is ${checkedData.fullName}` });
+    if (checkedData.currentTitle) contextMessages.push({ role: "user", content: `I'm a ${checkedData.currentTitle}` });
+    if (checkedData.companyName) contextMessages.push({ role: "user", content: `At ${checkedData.companyName}` });
+    if (checkedData.industry) contextMessages.push({ role: "user", content: `In the ${checkedData.industry} industry` });
+    if (checkedData.productName) contextMessages.push({ role: "user", content: `Building ${checkedData.productName}` });
+    if (checkedData.targetCustomer) contextMessages.push({ role: "user", content: `For ${checkedData.targetCustomer}` });
+    if (checkedData.productDescription) contextMessages.push({ role: "user", content: `Which ${checkedData.productDescription}` });
+
+    setConversationHistory(contextMessages);
+    setIsReadyToGenerate(true);
+  }, [getCheckedProfileData]);
 
   // Auto-start personalization when we have post content and profile data is loaded
   useEffect(() => {
@@ -241,7 +267,7 @@ export function useContextGatheringViewModel(postContent: string) {
           ]);
         }
       } catch (error) {
-        console.error("Failed to start personalization:", error);
+        // Error is shown to user via toast or UI state
         // Fallback: just use profile data
         applyCurrentInfo();
       } finally {
@@ -258,8 +284,7 @@ export function useContextGatheringViewModel(postContent: string) {
     }, 500);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postContent, profileData]);
+  }, [postContent, profileData, getCheckedProfileData, applyCurrentInfo]);
 
 
   // Get what profile fields are filled vs missing
@@ -286,17 +311,6 @@ export function useContextGatheringViewModel(postContent: string) {
     }));
   };
 
-  // Get checked profile data only (uses editable data)
-  const getCheckedProfileData = () => {
-    const checked: Record<string, string> = {};
-    Object.entries(editableProfileData).forEach(([key, value]) => {
-      if (checkedProfileFields[key] && value && String(value).trim()) {
-        checked[key] = value;
-      }
-    });
-    return checked;
-  };
-
   // Start with personalization - ask the LLM what's needed (it knows profile data)
   const startPersonalization = async () => {
     setModalStep("questioning");
@@ -321,30 +335,12 @@ export function useContextGatheringViewModel(postContent: string) {
         ]);
       }
     } catch (error) {
-      console.error("Failed to start personalization:", error);
+      logger.error("Failed to start personalization", error);
       // Fallback: just use profile data
       applyCurrentInfo();
     } finally {
       setIsAskingQuestion(false);
     }
-  };
-
-  // Apply current profile data directly (only checked fields)
-  const applyCurrentInfo = () => {
-    // Convert CHECKED profile data to conversation format so content generation can use it
-    const contextMessages: ChatMessage[] = [];
-    const checkedData = getCheckedProfileData();
-
-    if (checkedData.fullName) contextMessages.push({ role: "user", content: `My name is ${checkedData.fullName}` });
-    if (checkedData.currentTitle) contextMessages.push({ role: "user", content: `I'm a ${checkedData.currentTitle}` });
-    if (checkedData.companyName) contextMessages.push({ role: "user", content: `At ${checkedData.companyName}` });
-    if (checkedData.industry) contextMessages.push({ role: "user", content: `In the ${checkedData.industry} industry` });
-    if (checkedData.productName) contextMessages.push({ role: "user", content: `Building ${checkedData.productName}` });
-    if (checkedData.targetCustomer) contextMessages.push({ role: "user", content: `For ${checkedData.targetCustomer}` });
-    if (checkedData.productDescription) contextMessages.push({ role: "user", content: `Which ${checkedData.productDescription}` });
-
-    setConversationHistory(contextMessages);
-    setIsReadyToGenerate(true);
   };
 
   const toggleVoiceMode = () => {
@@ -385,7 +381,7 @@ export function useContextGatheringViewModel(postContent: string) {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (permError) {
-        console.error("Microphone permission error:", permError);
+        // Error is shown to user via toast
         toast.error("Could not access microphone. Please grant permission.");
         setIsVoiceMode(false);
         return;
@@ -421,7 +417,7 @@ export function useContextGatheringViewModel(postContent: string) {
         recognitionRef.current.start();
         toast.info("Listening... Speak now!");
       } catch (error) {
-        console.error("Failed to start recognition:", error);
+        // Error is shown to user via toast
         isStartingRef.current = false;
         setIsListening(false);
 
@@ -433,7 +429,7 @@ export function useContextGatheringViewModel(postContent: string) {
         }
       }
     } catch (error) {
-      console.error("Failed to prepare recognition:", error);
+      // Error is shown to user via toast
       isStartingRef.current = false;
       setIsListening(false);
       toast.error("Failed to initialize voice input. Please try again.");
@@ -447,7 +443,7 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsListening(false);
   };
 
-  const handleSubmitAnswer = async () => {
+  const handleSubmitAnswer = useCallback(async () => {
     if (!currentAnswer.trim()) return;
 
     const updatedHistory = [
@@ -484,12 +480,12 @@ export function useContextGatheringViewModel(postContent: string) {
         }
       }
     } catch (error) {
-      console.error("Failed to get next question:", error);
+      // Error getting next question - silently fail
       setIsReadyToGenerate(true);
     } finally {
       setIsAskingQuestion(false);
     }
-  };
+  }, [currentAnswer, conversationHistory, getCheckedProfileData, postContent, isVoiceMode]);
 
   const handleSkip = () => {
     setIsReadyToGenerate(true);
@@ -501,8 +497,7 @@ export function useContextGatheringViewModel(postContent: string) {
       setShouldAutoSubmit(false);
       handleSubmitAnswer();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldAutoSubmit, currentAnswer]);
+  }, [shouldAutoSubmit, currentAnswer, handleSubmitAnswer]);
 
   const reset = () => {
     setConversationHistory([]);

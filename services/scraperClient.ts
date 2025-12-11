@@ -2,6 +2,8 @@
  * Client for scraper API endpoints
  */
 
+import type { ApiMaestroPost } from "./linkedinScraperService";
+
 export interface ScrapeLinkedInRequest {
   profileUrls: string[];
 }
@@ -9,7 +11,7 @@ export interface ScrapeLinkedInRequest {
 export interface ScrapeLinkedInResponse {
   success: boolean;
   postsScraped?: number;
-  posts?: any[];
+  posts?: ApiMaestroPost[];
   error?: string;
   urlsSent?: string[];
 }

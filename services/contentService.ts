@@ -1,5 +1,12 @@
-import { createClient } from "@/lib/supabase/client";
-import type { SupabaseClient } from "@supabase/supabase-js";
+/**
+ * ContentService - Business logic for creator content
+ *
+ * Responsibilities:
+ * - Business logic for content transformation and formatting
+ * - Orchestrates repository calls
+ * - NO direct database queries
+ */
+
 import type {
   ContentPost,
   CreatorContent,
@@ -9,15 +16,10 @@ import type {
   PostMedia,
 } from "@/types";
 import { extractNameFromUrl, formatPostTitle, formatTimeAgo } from "@/lib/formatters";
-
-interface CreatorContentWithProfile extends CreatorContent {
-  creator_profiles: {
-    creator_id: number;
-    profile_url: string;
-    platform: string;
-    display_name?: string | null;
-  };
-}
+import { ContentRepository, contentRepository } from "@/repositories/contentRepository";
+import { CreatorRepository, creatorRepository } from "@/repositories/creatorRepository";
+import { UserFollowRepository, userFollowRepository } from "@/repositories/userFollowRepository";
+import { logger } from "@/lib/logger";
 
 interface UserFollowRow {
   creator_id: number;
@@ -32,31 +34,17 @@ interface PaginationOptions {
 const DEFAULT_PAGE_SIZE = 1000; // Fetch all posts
 
 export class ContentService {
-  private getClient() {
-    return createClient();
-  }
+  constructor(
+    private contentRepo: ContentRepository,
+    private creatorRepo: CreatorRepository,
+    private followRepo: UserFollowRepository
+  ) {}
 
   async fetchCreatorContent(options: PaginationOptions = {}): Promise<ContentPost[]> {
-    const { limit = DEFAULT_PAGE_SIZE, offset = 0 } = options;
+    const data = await this.contentRepo.findAllWithProfiles(options);
 
-    const { data } = await this.getClient()
-      .from("creator_content")
-      .select(`
-        *,
-        creator_profiles!inner (
-          creator_id,
-          profile_url,
-          platform,
-          display_name
-        )
-      `)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (!data) return [];
-
-    // Transform database data to ContentPost format
-    const posts = data.map((item: CreatorContentWithProfile) => {
+    // Business logic: Transform database data to ContentPost format
+    const posts = data.map((item) => {
       // Try to parse post_raw as JSON (new format with full data)
       let parsedPost: Record<string, unknown> | null = null;
       try {
@@ -97,46 +85,19 @@ export class ContentService {
     return posts.sort((a: ContentPost, b: ContentPost) => (b.postedAtTimestamp || 0) - (a.postedAtTimestamp || 0));
   }
 
-  async fetchCreatorContentById(creatorId: number): Promise<ContentPost[]> {
-    const { data } = await this.getClient()
-      .from("creator_content")
-      .select("*")
-      .eq("creator_id", creatorId)
-      .order("content_id", { ascending: false });
-
-    if (!data) return [];
-
-    return data.map((item: CreatorContent) => ({
-      id: item.content_id,
-      title: "Some Cool Post Title",
-      author: "First Last",
-      timeAgo: "1 day ago",
-      isHighlighted: false,
-      creatorId: item.creator_id,
-      postUrl: item.post_url,
-    }));
-  }
-
   async saveContent(
     creatorId: number,
     postUrl: string,
     postRaw?: string
   ): Promise<void> {
-    await this.getClient().from("creator_content").insert({
-      creator_id: creatorId,
-      post_url: postUrl,
-      post_raw: postRaw,
-    });
+    return this.contentRepo.create(creatorId, postUrl, postRaw);
   }
 
   /**
    * Get total count of posts for pagination
    */
   async getPostCount(): Promise<number> {
-    const { count } = await this.getClient()
-      .from("creator_content")
-      .select("*", { count: "exact", head: true });
-    return count || 0;
+    return this.contentRepo.count();
   }
 
   /**
@@ -145,45 +106,32 @@ export class ContentService {
    * This enables the UI to show follow/unfollow buttons with correct state
    */
   async fetchCreators(userId?: string): Promise<Profile[]> {
-    const client = this.getClient();
-
     // Fetch all creator profiles from database
-    const { data } = await client
-      .from("creator_profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const data = await this.creatorRepo.findAll();
 
-    if (!data) return [];
-
-    // Build a map of creator IDs to follow timestamps for O(1) lookup
+    // Business logic: Build a map of creator IDs to follow timestamps for O(1) lookup
     const followedCreatorsMap = new Map<number, string>();
 
     if (userId) {
-      const { data: follows, error } = await client
-        .from("user_follows")
-        .select("creator_id, created_at")
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error("Failed to load followed creators", error);
-      } else if (follows) {
-        // Convert array of follow records to Map for efficient lookup with timestamps
-        (follows as UserFollowRow[]).forEach((follow) => {
-          followedCreatorsMap.set(follow.creator_id, follow.created_at);
+      try {
+        const profiles = await this.followRepo.findByUserIdWithProfiles(userId);
+        // Get creator IDs from profiles
+        profiles.forEach((profile) => {
+          followedCreatorsMap.set(profile.creator_id, new Date().toISOString());
         });
+      } catch (error) {
+        logger.error("Failed to load followed creators", error);
       }
     }
 
     // Fetch posts with stats for each creator
-    const { data: contentData } = await client
-      .from("creator_content")
-      .select("creator_id, post_raw");
+    const contentData = await this.contentRepo.findAllForStats();
 
-    // Calculate post counts and average stats per creator
+    // Business logic: Calculate post counts and average stats per creator
     const creatorStats = new Map<number, { count: number; totalReactions: number; totalComments: number; totalReposts: number }>();
 
     if (contentData) {
-      contentData.forEach((item: { creator_id: number; post_raw?: string }) => {
+      contentData.forEach((item) => {
         const existing = creatorStats.get(item.creator_id) || { count: 0, totalReactions: 0, totalComments: 0, totalReposts: 0 };
         existing.count++;
 
@@ -218,9 +166,9 @@ export class ContentService {
         isFollowed: followedCreatorsMap.has(creator.creator_id),
         followedAt: followedCreatorsMap.get(creator.creator_id),
         postCount,
-        avgReactions: postCount > 0 ? Math.round(stats!.totalReactions / postCount) : 0,
-        avgComments: postCount > 0 ? Math.round(stats!.totalComments / postCount) : 0,
-        avgReposts: postCount > 0 ? Math.round(stats!.totalReposts / postCount) : 0,
+        avgReactions: stats && postCount > 0 ? Math.round(stats.totalReactions / postCount) : 0,
+        avgComments: stats && postCount > 0 ? Math.round(stats.totalComments / postCount) : 0,
+        avgReposts: stats && postCount > 0 ? Math.round(stats.totalReposts / postCount) : 0,
       };
     });
   }
@@ -228,18 +176,16 @@ export class ContentService {
   /**
    * Server-side method: Get all creator content (for API routes)
    */
-  async getAllCreatorContent(supabase: SupabaseClient): Promise<CreatorContent[]> {
-    const { data, error } = await supabase
-      .from("creator_content")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    return data || [];
+  async getAllCreatorContent(): Promise<CreatorContent[]> {
+    // Use repository instead of direct Supabase query
+    const data = await this.contentRepo.findAllForStats();
+    return data as CreatorContent[];
   }
 }
 
-export const contentService = new ContentService();
+// Singleton instance with injected repositories
+export const contentService = new ContentService(
+  contentRepository,
+  creatorRepository,
+  userFollowRepository
+);

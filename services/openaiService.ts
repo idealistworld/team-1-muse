@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { GenerateEditResponse, AskQuestionResponse } from "@/types/api";
+import type { ProfileData } from "@/types";
 
 export class OpenAIService {
   private openai: OpenAI;
@@ -232,6 +233,113 @@ IMPORTANT RULES:
       additions,
       deletions,
     };
+  }
+
+  async analyzePost(postContent: string, existingProfile?: Partial<ProfileData>) {
+    // Build context about what we already know
+    let profileContext = "";
+    if (existingProfile && Object.keys(existingProfile).length > 0) {
+      const known = Object.entries(existingProfile)
+        .filter(([, v]) => v && String(v).trim())
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('\n');
+      if (known) {
+        profileContext = `\n\nWE ALREADY KNOW ABOUT THE USER:\n${known}\n\nDO NOT ask about things we already know.`;
+      }
+    }
+
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert at analyzing LinkedIn posts to figure out what personal info is needed to rewrite them for someone else.
+
+Your job:
+1. Read the post carefully
+2. Identify SPECIFIC details that would need to be personalized (company names, metrics, experiences, etc.)
+3. Generate 1-3 SHORT, SPECIFIC questions to gather the user's equivalent info
+
+Return a JSON object with:
+{
+  "analysis": "Brief 1-sentence summary of what this post is about",
+  "dataPoints": ["List of specific things in the post that need personalization"],
+  "questions": [
+    {
+      "field": "fieldName",
+      "question": "The specific question to ask",
+      "why": "Brief reason why we need this"
+    }
+  ]
+}
+
+Available field names: fullName, currentTitle, companyName, industry, productName, targetCustomer, experience, metrics, achievement
+
+Rules:
+- Questions should be SPECIFIC to this post, not generic
+- If post mentions "$1M ARR", ask about THEIR revenue/metrics
+- If post mentions a specific experience, ask about THEIR similar experience
+- Max 3 questions
+- Keep questions short and conversational
+- If post is generic/motivational and we have their name, return empty questions array${profileContext}`
+        },
+        {
+          role: "user",
+          content: `Analyze this post:\n\n${postContent}`
+        }
+      ],
+      temperature: 0.3,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim() || '{}';
+
+    // Parse the JSON response
+    try {
+      const parsed = JSON.parse(response);
+      return {
+        analysis: parsed.analysis || "General post",
+        dataPoints: parsed.dataPoints || [],
+        questions: parsed.questions || [],
+      };
+    } catch {
+      return {
+        analysis: "Unable to analyze",
+        dataPoints: [],
+        questions: [],
+      };
+    }
+  }
+
+  async extractFieldValue(transcript: string, fieldLabel: string): Promise<string> {
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are extracting structured data from natural language voice input.
+The user is filling out a profile form field by field using voice input.
+Extract ONLY the relevant value for the requested field from what the user said.
+Be concise - extract just the core information, not full sentences.
+
+Examples:
+Field: "Current Title" | User says: "I'm the founder" → Extract: "Founder"
+Field: "Company Name" | User says: "my company is called Acme Corp" → Extract: "Acme Corp"
+Field: "Industry" | User says: "we're in SaaS" → Extract: "SaaS"
+Field: "Location" | User says: "I'm based in San Francisco" → Extract: "San Francisco"
+Field: "Total Users" | User says: "we have about 1000 users" → Extract: "1000"
+
+Return ONLY the extracted value, nothing else.`
+        },
+        {
+          role: "user",
+          content: `Field: "${fieldLabel}"\nUser said: "${transcript}"\n\nExtract the value:`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 100,
+    });
+
+    return completion.choices[0]?.message?.content?.trim() || transcript;
   }
 }
 

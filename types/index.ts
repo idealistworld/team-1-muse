@@ -18,7 +18,7 @@ export interface UserPost {
   title?: string;
   rawText: string;
   status?: PostStatus | null;
-  editorState?: any;
+  editorState?: unknown; // Rich text editor state (format varies by editor)
   scheduledFor?: string;
   publishedAt?: string;
   wordCount?: number;

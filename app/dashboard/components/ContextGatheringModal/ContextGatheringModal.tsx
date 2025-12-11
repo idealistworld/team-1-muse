@@ -36,8 +36,7 @@ export function ContextGatheringModal({
       onComplete(vm.conversationHistory);
       vm.reset();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vm.isReadyToGenerate, isOpen]);
+  }, [vm.isReadyToGenerate, isOpen, onComplete, vm]);
 
   if (!isOpen) return null;
 
