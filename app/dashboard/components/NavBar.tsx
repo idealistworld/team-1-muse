@@ -32,7 +32,8 @@ export default function NavBar() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    // Hard redirect to ensure server-side auth sync with middleware
+    window.location.href = "/login";
   }
 
   // Don't render navbar on login page
