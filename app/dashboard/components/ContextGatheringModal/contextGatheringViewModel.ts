@@ -82,6 +82,11 @@ export function useContextGatheringViewModel(postContent: string) {
     setIsReadyToGenerate(true);
   }, [profileData]);
 
+  // Reset when post content changes
+  useEffect(() => {
+    hasAnalyzedRef.current = false;
+  }, [postContent]);
+
   // Auto-start personalization when we have post content and profile data is loaded
   useEffect(() => {
     if (!postContent || hasAnalyzedRef.current) return;
